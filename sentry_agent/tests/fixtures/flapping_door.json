@@ -1,0 +1,31 @@
+{
+  "triggering_event": {
+    "id": "evt_aa11",
+    "sensor": "door",
+    "severity": "warning",
+    "message": "Front door open/close (8th in 30 min)",
+    "timestamp": "2026-05-09T14:32:18+00:00",
+    "raw_value": 1.0
+  },
+  "current_state": {
+    "armed": false,
+    "threat_score": 4,
+    "readings": [
+      { "type": "motion", "value": 0.0, "active": false, "timestamp": "2026-05-09T14:32:18+00:00" },
+      { "type": "sound",  "value": 41.0, "active": false, "timestamp": "2026-05-09T14:32:18+00:00" },
+      { "type": "door",   "value": 1.0,  "active": true,  "timestamp": "2026-05-09T14:32:18+00:00" },
+      { "type": "temperature", "value": 24.0, "active": false, "timestamp": "2026-05-09T14:32:18+00:00" }
+    ],
+    "last_update": "2026-05-09T14:32:18+00:00"
+  },
+  "recent_events": [
+    { "id": "evt_aa10", "sensor": "door", "severity": "safe", "message": "Front door cycled", "timestamp": "2026-05-09T14:30:55+00:00", "raw_value": 1.0 },
+    { "id": "evt_aa0f", "sensor": "door", "severity": "safe", "message": "Front door cycled", "timestamp": "2026-05-09T14:28:11+00:00", "raw_value": 1.0 },
+    { "id": "evt_aa0e", "sensor": "door", "severity": "safe", "message": "Front door cycled", "timestamp": "2026-05-09T14:24:03+00:00", "raw_value": 1.0 },
+    { "id": "evt_aa0d", "sensor": "door", "severity": "safe", "message": "Front door cycled", "timestamp": "2026-05-09T14:19:42+00:00", "raw_value": 1.0 },
+    { "id": "evt_aa0c", "sensor": "door", "severity": "safe", "message": "Front door cycled", "timestamp": "2026-05-09T14:15:18+00:00", "raw_value": 1.0 },
+    { "id": "evt_aa0b", "sensor": "door", "severity": "safe", "message": "Front door cycled", "timestamp": "2026-05-09T14:11:00+00:00", "raw_value": 1.0 },
+    { "id": "evt_aa0a", "sensor": "door", "severity": "safe", "message": "Front door cycled", "timestamp": "2026-05-09T14:07:33+00:00", "raw_value": 1.0 }
+  ],
+  "notes": "System is disarmed. Door has been triggering at irregular short intervals; possible wind / loose magnet."
+}

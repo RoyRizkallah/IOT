@@ -1,0 +1,48 @@
+A new sensor event needs your evaluation.
+
+## Triggering event
+
+- **Sensor:** {{ event.sensor.value }}
+- **Severity (raw):** {{ event.severity.value.upper() }}
+- **Message:** {{ event.message }}
+- **Timestamp:** {{ event.timestamp.isoformat() }}{% if event.raw_value is not none %}
+- **Raw reading:** {{ event.raw_value }}{% endif %}
+
+## Current home state
+
+- **Armed:** {{ "yes" if state.armed else "no" }}
+- **Threat score:** {{ state.threat_score }}/10 ({{ state.level.value.upper() }})
+- **Last update:** {{ state.last_update.isoformat() }}
+
+### Live sensors
+{% for r in state.readings %}
+- {{ r.type.value }}: value={{ r.value }}{{ r.type.unit }}, active={{ r.active }}
+{% endfor %}
+
+## Recent event log (most recent first, last {{ recent_events | length }} events)
+{% if recent_events %}
+{% for e in recent_events %}
+- `{{ e.id }}` · {{ e.timestamp.isoformat() }} · {{ e.sensor.value }} · {{ e.severity.value }} · {{ e.message }}
+{% endfor %}
+{% else %}
+(no recent events on file)
+{% endif %}
+
+{% if notes %}
+## Operator notes
+{{ notes }}
+{% endif %}
+
+---
+
+Evaluate this event:
+
+1. Decide whether you need more context. If yes, call `query_recent_events`
+   and/or `query_sensor_state`. Don't call tools you don't need.
+2. Reason about whether the triggering event is part of a benign pattern,
+   a noise glitch, or a real threat.
+3. If the situation calls for siren or notification, call the matching tool
+   FIRST so the side-effect is queued.
+4. Then emit your final decision as a single JSON object exactly matching
+   the schema in your system instructions. No markdown fences, no prose
+   around it.

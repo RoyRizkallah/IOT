@@ -1,0 +1,35 @@
+# Don't ship the local venv or build artefacts into the image.
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Tests + dev junk
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Docker things — don't recursively bundle
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Local secrets
+*.local.yaml
+secrets.yaml
+
+# Tests are mounted as a read-only volume in dev compose if needed; keeping
+# the image lean is more important.
+tests/

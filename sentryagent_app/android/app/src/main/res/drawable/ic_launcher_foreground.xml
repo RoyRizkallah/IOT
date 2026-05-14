@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive icon foreground. Sits on the 108×108 canvas with a 66dp safe
+     zone in the center. White shield with a small accent dot, optimised for
+     legibility against the gradient background. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Shield outline + fill (white). The path is a softly rounded
+         heater-shield drawn around the 54,54 center, fitting the safe zone. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,32
+                          C54,32 38,36 32,38
+                          C30.5,38.5 30,39.8 30,41
+                          L30,58
+                          C30,67 36,73.5 41,76.5
+                          C46.5,79.7 52,82.5 54,83
+                          C56,82.5 61.5,79.7 67,76.5
+                          C72,73.5 78,67 78,58
+                          L78,41
+                          C78,39.8 77.5,38.5 76,38
+                          C70,36 54,32 54,32 Z" />
+
+    <!-- Inner accent dot -->
+    <path
+        android:fillColor="#06B6D4"
+        android:pathData="M54,52
+                          m-5,0
+                          a5,5 0 1,0 10,0
+                          a5,5 0 1,0 -10,0 Z" />
+</vector>

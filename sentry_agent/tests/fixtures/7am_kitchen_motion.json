@@ -1,0 +1,48 @@
+{
+  "triggering_event": {
+    "id": "evt_19f1",
+    "sensor": "motion",
+    "severity": "warning",
+    "message": "Motion in kitchen",
+    "timestamp": "2026-05-09T07:14:32+00:00",
+    "raw_value": 1.0
+  },
+  "current_state": {
+    "armed": true,
+    "threat_score": 4,
+    "readings": [
+      { "type": "motion", "value": 1.0, "active": true,  "timestamp": "2026-05-09T07:14:32+00:00" },
+      { "type": "sound",  "value": 38.0, "active": false, "timestamp": "2026-05-09T07:14:32+00:00" },
+      { "type": "door",   "value": 0.0,  "active": false, "timestamp": "2026-05-09T07:14:00+00:00" },
+      { "type": "temperature", "value": 21.8, "active": false, "timestamp": "2026-05-09T07:14:00+00:00" }
+    ],
+    "last_update": "2026-05-09T07:14:32+00:00"
+  },
+  "recent_events": [
+    {
+      "id": "evt_19f0",
+      "sensor": "motion",
+      "severity": "safe",
+      "message": "Motion in hallway",
+      "timestamp": "2026-05-09T07:13:50+00:00",
+      "raw_value": 1.0
+    },
+    {
+      "id": "evt_19ee",
+      "sensor": "motion",
+      "severity": "safe",
+      "message": "Motion in bedroom",
+      "timestamp": "2026-05-09T07:11:04+00:00",
+      "raw_value": 1.0
+    },
+    {
+      "id": "evt_19ec",
+      "sensor": "sound",
+      "severity": "safe",
+      "message": "Alarm clock at 36dB",
+      "timestamp": "2026-05-09T07:00:01+00:00",
+      "raw_value": 36.0
+    }
+  ],
+  "notes": "Daily wake-up time is around 07:00. Kitchen activity is normal at this hour."
+}

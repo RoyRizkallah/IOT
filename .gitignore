@@ -1,0 +1,49 @@
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+
+# IDE / editor
+.vscode/
+.idea/
+*.iml
+*.suo
+*.swp
+*.swo
+.cursor/
+
+# Logs
+*.log
+logs/
+
+# Secrets — never commit these
+.env
+.env.*
+*.secret
+secrets.yaml
+*.local.yaml
+
+# Local data / caches that fell through subproject gitignores
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Build / dependency caches (defensive — subprojects also ignore these)
+node_modules/
+.gradle/
+build/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.egg-info/

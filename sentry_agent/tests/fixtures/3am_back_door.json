@@ -1,0 +1,48 @@
+{
+  "triggering_event": {
+    "id": "evt_07c3",
+    "sensor": "motion",
+    "severity": "warning",
+    "message": "Motion detected near the back door",
+    "timestamp": "2026-05-09T03:02:14+00:00",
+    "raw_value": 1.0
+  },
+  "current_state": {
+    "armed": true,
+    "threat_score": 5,
+    "readings": [
+      { "type": "motion", "value": 1.0, "active": true,  "timestamp": "2026-05-09T03:02:14+00:00" },
+      { "type": "sound",  "value": 64.0, "active": true,  "timestamp": "2026-05-09T03:02:01+00:00" },
+      { "type": "door",   "value": 0.0,  "active": false, "timestamp": "2026-05-09T03:00:48+00:00" },
+      { "type": "temperature", "value": 19.4, "active": false, "timestamp": "2026-05-09T03:02:00+00:00" }
+    ],
+    "last_update": "2026-05-09T03:02:14+00:00"
+  },
+  "recent_events": [
+    {
+      "id": "evt_07c2",
+      "sensor": "sound",
+      "severity": "warning",
+      "message": "Sound spike at 64dB",
+      "timestamp": "2026-05-09T03:02:01+00:00",
+      "raw_value": 64.0
+    },
+    {
+      "id": "evt_07c1",
+      "sensor": "door",
+      "severity": "safe",
+      "message": "Brief door rattle",
+      "timestamp": "2026-05-09T03:00:48+00:00",
+      "raw_value": 0.0
+    },
+    {
+      "id": "evt_07a4",
+      "sensor": "motion",
+      "severity": "safe",
+      "message": "Brief motion in hallway",
+      "timestamp": "2026-05-09T01:14:02+00:00",
+      "raw_value": 1.0
+    }
+  ],
+  "notes": "Homeowner reports being asleep. No expected entries tonight."
+}

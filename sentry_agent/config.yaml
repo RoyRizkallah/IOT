@@ -1,0 +1,58 @@
+# SentryAgent runtime config.
+#
+# Override per-host with `config.local.yaml` (gitignored) by passing
+# `--config config.local.yaml` to the CLI.
+
+llm:
+  # Provider: "ollama" (default) or "claude" (not implemented yet)
+  provider: ollama
+
+  # Ollama model. Pull with `ollama pull <model>` before running.
+  # Recommended:
+  #   qwen2.5:7b-instruct  — best tool calling, ~4.5GB
+  #   llama3.2:3b           — lighter, ~2GB
+  #   phi3.5:3.8b           — balanced, ~2.3GB
+  model: qwen2.5:7b-instruct
+
+  # Ollama HTTP endpoint
+  base_url: http://localhost:11434
+
+  # Generation knobs
+  temperature: 0.2     # low — we want deterministic security decisions
+  max_tokens: 800
+  request_timeout_s: 90
+
+agent:
+  # How many recent events to include as context for each decision
+  history_window_size: 12
+
+  # Max retries when the model fails to emit valid JSON
+  max_tool_call_retries: 2
+
+  # Always escalate (skip LLM) if score >= this. Saves a roundtrip on
+  # obvious red events; the LLM only reasons about ambiguous Yellow ones.
+  hard_alert_threshold: 7
+
+mqtt:
+  # Filled in during Phase 2a. Ignored for now.
+  enabled: false
+  host: localhost
+  port: 1883
+  topic_prefix: home
+
+logging:
+  level: INFO
+  rich_console: true
+
+storage:
+  # SQLite database file. Persists events, decisions, chat, and the
+  # latest state across restarts. The Docker compose stack mounts
+  # /data as a named volume so the file survives `compose down`.
+  db_path: data/sentry.db
+
+  # On startup we hydrate the orchestrator's in-memory deques from these
+  # many most-recent rows so replay over MQTT serves history.
+  history_load_limit: 50
+
+  # Periodic prune to bound DB size. Per-table cap.
+  prune_max_rows: 5000

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Splash logo: a softly rounded shield in brand blue, sized to look right
+     centered on an App Bar–free splash background. Stroke-less for crispness
+     at any density. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#2954FF"
+        android:pathData="M54,18
+                          C54,18 30,24 22,27
+                          C19.5,28 18,30 18,33
+                          L18,58
+                          C18,73 28.5,84 38,89.5
+                          C46,94.5 52,98 54,98.5
+                          C56,98 62,94.5 70,89.5
+                          C79.5,84 90,73 90,58
+                          L90,33
+                          C90,30 88.5,28 86,27
+                          C78,24 54,18 54,18 Z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,46
+                          m-7,0
+                          a7,7 0 1,0 14,0
+                          a7,7 0 1,0 -14,0 Z" />
+
+    <path
+        android:fillColor="#06B6D4"
+        android:pathData="M54,46
+                          m-3.5,0
+                          a3.5,3.5 0 1,0 7,0
+                          a3.5,3.5 0 1,0 -7,0 Z" />
+</vector>

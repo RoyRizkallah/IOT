@@ -1,0 +1,144 @@
+# SentryAgent dev stack.
+#
+# Default profile brings up the full app:
+#   broker  — Mosquitto MQTT broker (1883 + 9001 websockets)
+#   sensors — sentry mock --scenario default
+#   agent   — sentry serve  (persists to /data/sentry.db, talks to Ollama)
+#
+# Two optional profiles:
+#   --profile with-ollama   — also run Ollama in a container + auto-pull model
+#   --profile tools         — mosquitto_sub for tailing the bus
+#
+# Typical usage:
+#   # Native Ollama installed on host (fastest path):
+#   docker compose up --build
+#
+#   # No Ollama installed? Run everything in containers:
+#   docker compose --profile with-ollama up --build
+#
+#   # Tail the MQTT bus from a separate terminal:
+#   docker compose run --rm tools mosquitto_sub -h broker -t 'home/#' -v
+#
+# Persistent data lives in named volumes so `docker compose down` keeps it.
+# To wipe everything (DB, models, broker history):
+#   docker compose --profile with-ollama down -v
+
+name: sentry
+
+services:
+  broker:
+    image: eclipse-mosquitto:2
+    container_name: sentry-broker
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -t '$$SYS/broker/version' -C 1 -W 2 -E"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  sensors:
+    build: .
+    image: sentry-agent:latest
+    container_name: sentry-sensors
+    restart: unless-stopped
+    command: ["mock", "--scenario", "default", "--speed", "1.0"]
+    environment:
+      SENTRY_MQTT_HOST: broker
+      SENTRY_MQTT_PORT: "1883"
+      SENTRY_LOG_LEVEL: INFO
+    depends_on:
+      broker:
+        condition: service_healthy
+
+  agent:
+    build: .
+    image: sentry-agent:latest
+    container_name: sentry-agent
+    restart: unless-stopped
+    command: ["serve"]
+    environment:
+      SENTRY_MQTT_HOST: broker
+      SENTRY_MQTT_PORT: "1883"
+      # SQLite file inside a named volume so it survives `compose down`.
+      SENTRY_DB_PATH: /data/sentry.db
+      # By default we expect Ollama on the host. Override to "ollama" when
+      # running with `--profile with-ollama`.
+      SENTRY_OLLAMA_BASE_URL: ${SENTRY_OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      SENTRY_OLLAMA_MODEL: ${SENTRY_OLLAMA_MODEL:-qwen2.5:7b-instruct}
+      SENTRY_LOG_LEVEL: INFO
+    volumes:
+      - sentry_data:/data
+    extra_hosts:
+      # Lets `host.docker.internal` resolve on Linux too. Harmless on
+      # macOS/Windows where Docker Desktop already provides it.
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      broker:
+        condition: service_healthy
+
+  # ─── Optional: containerised Ollama ───────────────────────────────────────
+  # Run with: docker compose --profile with-ollama up
+  ollama:
+    image: ollama/ollama:latest
+    container_name: sentry-ollama
+    profiles: ["with-ollama"]
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  # ─── Optional: one-shot to pull the model after Ollama is healthy ─────────
+  # Activated by the same `with-ollama` profile so a single
+  # `docker compose --profile with-ollama up` is enough end-to-end.
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: sentry-ollama-init
+    profiles: ["with-ollama"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: ollama:11434
+      SENTRY_OLLAMA_MODEL: ${SENTRY_OLLAMA_MODEL:-qwen2.5:7b-instruct}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        echo "[ollama-init] Checking for model: $$SENTRY_OLLAMA_MODEL"
+        if ollama list 2>/dev/null | awk 'NR>1 {print $$1}' | grep -Fxq "$$SENTRY_OLLAMA_MODEL"; then
+          echo "[ollama-init] Already present, nothing to do."
+        else
+          echo "[ollama-init] Pulling $$SENTRY_OLLAMA_MODEL (first run can take several minutes)..."
+          ollama pull "$$SENTRY_OLLAMA_MODEL"
+          echo "[ollama-init] Pull complete."
+        fi
+    restart: "no"
+
+  # ─── Optional: ad-hoc CLI tools (mosquitto_sub/pub) ───────────────────────
+  # Run with: docker compose run --rm tools mosquitto_sub -h broker -t 'home/#' -v
+  tools:
+    image: eclipse-mosquitto:2
+    profiles: ["tools"]
+    entrypoint: ""
+    command: ["mosquitto_sub", "-h", "broker", "-t", "home/#", "-v"]
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:
+  ollama_models:
+  sentry_data:
