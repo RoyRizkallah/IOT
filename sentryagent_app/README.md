@@ -1,63 +1,71 @@
-# SentryAgent
+# SentryAgent — Mobile App
 
-AI-powered home security system. Raspberry Pi + Flutter + Claude API.
+Flutter application for the SentryAgent IoT home security system.
+Connects to the Python backend over MQTT, shows live sensor data,
+agent reasoning, chat history, and sensor charts — zero mock data,
+zero cloud dependency.
 
 ## Read these in order
 
-1. **`SentryAgent_Project_Proposal.docx`** — the project concept, what you're building and why
-2. **`STATUS.md`** — exactly what's built, mocked, and missing right now
-3. **`SETUP.md`** — get the app running on your machine in ~5 minutes
-4. **`ROADMAP.md`** — concrete tasks for the rest of the project, in order
+1. **`MOBILE_DOCS.md`** — full technical documentation: architecture,
+   providers, models, MQTT topics, screens, how to run
+2. **`SentryAgent_Project_Proposal.docx`** — the original project concept
 
 ## What's in this package
 
 ```
 sentryagent_app/
-├── README.md                              ← you are here
-├── STATUS.md                              ← what's done, what's not
-├── SETUP.md                               ← how to run the app
-├── ROADMAP.md                             ← what to build next
-├── SentryAgent_Project_Proposal.docx      ← the proposal document
+├── MOBILE_DOCS.md                         ← full technical documentation
 ├── pubspec.yaml                           ← Flutter dependencies
-├── android/                               ← native Android shell (generated)
+├── android/                               ← native Android shell
 └── lib/
-    ├── main.dart                          ← app entry point
+    ├── main.dart                          ← entry point, loads broker config
     ├── core/
-    │   ├── providers.dart                 ← Riverpod glue + data-source seam
-    │   ├── format.dart                    ← relative/absolute time helpers
-    │   ├── theme/
-    │   │   ├── app_colors.dart
-    │   │   ├── app_spacing.dart
-    │   │   ├── app_shadows.dart
-    │   │   └── app_theme.dart
-    │   └── widgets/
-    │       ├── soft_card.dart
-    │       ├── severity_pill.dart
-    │       └── sensor_meta.dart
+    │   ├── providers.dart                 ← all Riverpod providers
+    │   ├── format.dart                    ← time helpers
+    │   ├── haptics.dart                   ← five-level haptic vocabulary
+    │   ├── transitions.dart               ← FadeUpRoute navigation
+    │   ├── theme/                         ← color tokens, spacing, shadows, theme
+    │   └── widgets/                       ← ConnectionPill, SoftCard, SeverityPill…
     ├── data/
-    │   ├── models/security_state.dart     ← domain models
-    │   └── sources/mock_data_source.dart  ← fake data for development
+    │   ├── broker_config.dart             ← host/port, persisted via SharedPreferences
+    │   ├── models/security_state.dart     ← Dart domain models (mirrors Python)
+    │   └── sources/
+    │       ├── security_data_source.dart  ← abstract interface + ConnectionStatus
+    │       └── mqtt_data_source.dart      ← live MQTT implementation
     └── features/
         ├── shell/main_shell.dart          ← floating-pill bottom nav
-        ├── dashboard/
-        │   ├── dashboard_screen.dart
-        │   └── widgets/
-        │       ├── hero_backdrop.dart
-        │       ├── threat_ring.dart
-        │       └── sensor_tile.dart
-        ├── reasoning/
-        │   ├── reasoning_log_screen.dart
-        │   └── decision_detail_screen.dart
-        ├── history/history_screen.dart
-        ├── agent_console/agent_console_screen.dart
-        └── settings/settings_screen.dart
+        ├── dashboard/                     ← threat ring, sensor tiles, quick actions
+        ├── live_feed/                     ← fl_chart: waveform, temp, motion, door
+        ├── history/                       ← searchable, filterable event log
+        ├── reasoning/                     ← agent decisions with full reasoning
+        ├── agent_console/                 ← real-time chat with the LLM agent
+        └── settings/                     ← broker config, reconnect, toggles
 ```
 
-## Right now
+## Quick start
 
-You should:
-1. Read `STATUS.md` so you know what state the project is in
-2. Open `SETUP.md` and run the app
-3. When the dashboard is animating on your screen, come back and ask for the next phase
+```bash
+# 1. Start the backend first (see sentry_agent/README.md)
+cd sentry_agent
+docker compose --profile with-ollama up --build
 
-Don't read more code or ask for more files until the current code runs on your machine and you understand what it does.
+# 2. In a separate terminal, run the Flutter app
+cd sentryagent_app
+flutter pub get
+flutter run
+```
+
+The ConnectionPill in the top-right corner of the dashboard will turn
+green (`LIVE`) once the MQTT connection is established.
+
+## Connecting to the backend
+
+| Device | Broker host to enter in Settings |
+|---|---|
+| Android emulator | `10.0.2.2` (default) |
+| Physical device (same Wi-Fi) | LAN IP of the host machine, e.g. `192.168.1.5` |
+| iOS simulator | `127.0.0.1` |
+
+Open **Settings → Broker → Edit** in the app to change the host, then
+tap **Reconnect**.

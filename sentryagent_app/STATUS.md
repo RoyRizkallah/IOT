@@ -1,118 +1,78 @@
 # SentryAgent — Project Status
 
-Last updated: post-polish + live-feed pass.
+Last updated: May 2026 — MQTT + SQLite + LLM integration complete.
 
-## Legend
-- ✅ Built and working
-- 🟡 Stubbed / mocked (works in app, not real)
-- ⬜ Not built yet
+For the full technical breakdown see `MOBILE_DOCS.md` (mobile) and
+`sentry_agent/BACKEND_DOCS.md` (backend).
 
 ---
 
-## Mobile App (Flutter)
+## Mobile App (Flutter) — Complete
 
 ### Foundation
-- ✅ Real Flutter project scaffold (`android/`, `.metadata`, etc.)
-- ✅ Light, premium design system (white surfaces, blue accent, threat halos)
-- ✅ Color tokens (`app_colors.dart`)
-- ✅ Spacing + radius scale (`app_spacing.dart`)
-- ✅ Layered shadow tokens (`app_shadows.dart`)
-- ✅ Material 3 light theme with Plus Jakarta Sans + JetBrains Mono via `google_fonts`
-- ✅ Riverpod state management wired up (one provider file: `core/providers.dart`)
-- ✅ Domain models: `SensorType`, `ThreatLevel`, `SecurityState`, `SensorReading`,
-      `SecurityEvent`, `AgentDecision`, `AgentToolCall`, `ChatMessage`
-- ✅ `SecurityDataSource` abstract interface
-- 🟡 `MockDataSource` — emits sensor state, events, decisions, chat (replaced by MQTT in Phase 2)
+- ✅ Flutter 3 project, Android branding (adaptive icon, splash screen)
+- ✅ Light, premium design system — white surfaces, blue accent, threat halos
+- ✅ Color tokens, spacing scale, shadow presets, Material 3 theme
+- ✅ Plus Jakarta Sans (UI) + JetBrains Mono (data values) via google_fonts
+- ✅ Riverpod state management — single `providers.dart`, StreamProviders for all live data
+- ✅ Domain models: `SensorReading`, `SecurityEvent`, `AgentDecision`, `ChatMessage`, `SecurityState`
 
-### Polish primitives (new)
-- ✅ `core/haptics.dart` — five-level haptic vocabulary (tap / select / confirm / warning / alert)
-- ✅ `core/transitions.dart` — `FadeUpRoute` (fade + subtle vertical lift) used for in-app navigation
-- ✅ `core/widgets/press_scale.dart` — tactile scale-down + haptic on every primary tap target
-- ✅ `core/widgets/soft_card.dart` — canonical white card with layered shadow
-- ✅ `core/widgets/severity_pill.dart` — pastel-backed threat-level badge (Hero-shared)
-- ✅ `core/widgets/sensor_meta.dart` — per-sensor icon + colour helpers
-- ✅ `core/format.dart` — relative + absolute time formatters
+### Data Layer
+- ✅ `SecurityDataSource` abstract interface with `ConnectionStatus` enum
+- ✅ `MqttDataSource` — live MQTT implementation, auto-reconnect, no mock data
+- ✅ `BrokerConfig` — host/port persisted via `SharedPreferences`
+- ✅ History replay on (re)connect: publishes to `home/control/replay`,
+     receives full state + event + decision + chat history from backend
 
 ### Screens
 - ✅ **MainShell** — floating-pill bottom nav, animated active state, haptic on tab change
-- ✅ **Home Dashboard** — animated multi-blob gradient backdrop, threat ring with scan-line +
-      level-change halo pulse + medium/heavy haptic, premium sensor tiles with active-state halo,
-      tap a tile → Hero-flies into Live Feed, three Quick Actions with press-scale + haptic,
-      arm card with confirm haptic
-- ✅ **Reasoning Log** — list of `AgentDecision` cards with severity pill, tool chips; tap →
-      Hero animation on the severity pill, fade-up route into the full Decision Detail
-- ✅ **Decision Detail** — context, reasoning, tool calls, final action; severity pill is the
-      Hero target from the list
-- ✅ **Alert History** — chronological event list, search, filter chips (All / Today / Week / Critical)
-- ✅ **Agent Console** — chat UI, animated typing indicator, suggestion chips, send haptic, mock round-trip
-- ✅ **Live Feed** *(new)* — rolling-buffer charts via `fl_chart`:
-      - Sound: smoothed area chart (the "waveform")
-      - Temperature: line chart with end-cap dot
-      - Motion: 12-bucket histogram of detections in the window
-      - Door: open/closed state-strip painted with `CustomPainter`
-      - Window picker (1m / 5m / 10m), animated live indicator
-- ✅ **Settings** — notifications toggle, auto-arm, confirm-yellow toggle, timeout slider,
-      system info, privacy posture block
+- ✅ **Dashboard** — animated threat ring, live sensor tiles, ConnectionPill, quick actions, arm card
+- ✅ **Live Feed** — rolling-buffer charts (sound waveform, temperature line,
+     motion histogram, door state strip) via fl_chart, 1m/5m/10m window picker
+- ✅ **Alert History** — searchable, filterable event log (All / Today / Week / Critical)
+- ✅ **Reasoning Log** — AgentDecision cards, Hero animation → Decision Detail
+     (context, reasoning, tool calls, final action + reason)
+- ✅ **Agent Console** — real-time chat with LLM agent over MQTT,
+     typing indicator active until reply arrives, suggestion chips
+- ✅ **Settings** — broker host/port edit, reconnect button, live connection status
 
-### App-wide
-- ✅ Bottom navigation between screens
-- ✅ Custom fonts (Plus Jakarta Sans + JetBrains Mono)
-- ✅ Subtle motion on every screen (gradient drift, ring scan, tile pulse, typing dots, ring level pulse)
-- ✅ Adaptive launcher icon (vector drawable: blue→cyan gradient background, white shield foreground,
-      cyan accent dot, monochrome variant for Android 13+ themed icons)
-- ✅ Splash screen (pale `bgBase` background with the brand shield logo centered)
+### App-wide Polish
+- ✅ `PressScale` widget — tactile scale-down + haptic on every tap target
+- ✅ `FadeUpRoute` — fade + vertical lift navigation transition
+- ✅ Five-level haptic vocabulary (tap / select / confirm / warning / alert)
+- ✅ Custom launcher icon + splash screen
+
+---
+
+## Backend (Python + LLM) — Complete
+
+- ✅ MQTT orchestrator (aiomqtt) — events, state, decisions, chat, replay
+- ✅ Rule-based event classifier — fast pre-filter, no LLM for boring readings
+- ✅ Local LLM agent — Qwen 2.5 7B via Ollama, Jinja2 prompts, 6 tools
+- ✅ Chat service — separate async queue, never blocks security decisions
+- ✅ SQLite persistence (aiosqlite, WAL) — events, decisions, chat, state
+- ✅ Startup hydration — reloads last 50 rows from DB on restart
+- ✅ Mock sensor publisher — default / suspicious / flapping scenarios
+- ✅ Docker Compose — broker + sensors + agent + ollama-init auto-pull
+- ✅ 74 passing tests, ruff clean
+
+---
+
+## What Is Not Yet Built
+
+- ⬜ Raspberry Pi sensor reader (`pi.py`) — GPIO reads for real hardware
 - ⬜ Push notifications (Firebase Cloud Messaging)
-- ⬜ Real `MqttDataSource`
-- ⬜ REST API client for historical queries
-- ⬜ Biometric to disarm (`local_auth`)
+- ⬜ Biometric unlock to disarm (`local_auth`)
+- ⬜ iOS app icon / splash (Android done)
+- ⬜ MQTT authentication (currently anonymous — fine on a home LAN)
 
 ---
 
-## Backend (Raspberry Pi — Python)
+## What "Done" Looks Like
 
-### Not started yet — building app first.
-
-- ⬜ `sensor_reader.py` — reads PIR/sound/door/DHT11
-- ⬜ `mqtt_client.py` — publishes sensor data, subscribes to control commands
-- ⬜ `threat_scorer.py` — fast deterministic scoring (Layer 1)
-- ⬜ `actuator.py` — controls siren, LEDs
-- ⬜ `agent_engine.py` — calls Claude API, parses tool calls (Layer 2)
-- ⬜ `agent_tools.py` — defines and executes the agent's toolset
-- ⬜ `fcm_notifier.py` — sends push notifications to the app
-- ⬜ `db_handler.py` — SQLite I/O
-- ⬜ `serializer.py` — JSON serialization
-- ⬜ `api_server.py` — Flask REST API
-- ⬜ `main.py` — orchestrates everything
-
----
-
-## Infrastructure
-
-- ⬜ Mosquitto MQTT broker (install on laptop first, Pi later)
-- ⬜ Firebase project + FCM setup
-- ⬜ Anthropic API key (for the LLM agent)
-- ⬜ SQLite schema (3 tables: events, agent_decisions, user_responses)
-
----
-
-## Hardware
-
-- ⬜ Raspberry Pi (any model, but Pi 4 with 4GB+ recommended)
-- ⬜ Grove PIR Motion Sensor
-- ⬜ DHT11 Temperature/Humidity Sensor
-- ⬜ Grove Sound Sensor
-- ⬜ Magnetic Reed Switch
-- ⬜ Buzzer or active siren
-- ⬜ Jumper wires + breadboard or Grove HAT
-
----
-
-## What "done" looks like
-
-A grader can:
-1. Open the app on a phone, see the dashboard with live data from the real Pi
-2. Trigger a sensor (e.g. open the door) and see the dashboard update in real time
-3. Get a push notification when the threat level hits RED
-4. Open the Agent Console and ask "what happened in the last hour?" — get a real LLM-generated answer
-5. See the agent's reasoning logged with full transparency
-6. Receive a YELLOW-zone confirmation ("is this you?") and respond from the app
+1. Open the app on a phone — dashboard shows live data from the backend
+2. Trigger a sensor (mock scenario or real Pi) — dashboard updates in real time
+3. Watch the agent reason in the Reasoning Log — full context, tools called, decision
+4. Open the Agent Console and ask "what happened in the last hour?" — LLM answers
+5. Restart the backend — app replays full history from SQLite on reconnect
+6. *(Pi phase)* Trigger a real sensor — full loop closes without code changes

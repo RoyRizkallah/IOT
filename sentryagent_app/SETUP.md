@@ -1,100 +1,120 @@
 # SentryAgent — Setup Guide
 
-Get the app running on your machine in ~5 minutes.
+Get the full system running (backend + mobile app) in one shot.
 
 ## Prerequisites
 
-You need:
-- Flutter SDK (3.27 or later) — check with `flutter --version`
-- Android Studio OR VS Code with the Flutter extension
-- An Android emulator running, or a physical Android phone in USB debug mode
+| Tool | Version | Install |
+|---|---|---|
+| Docker Desktop | Latest | https://www.docker.com/products/docker-desktop |
+| Flutter SDK | ≥ 3.27 | https://docs.flutter.dev/get-started/install |
+| Android Studio / emulator | Any | For running the app |
 
-If `flutter doctor` shows red X's, fix those first. Don't proceed until it's all green checks (or only iOS missing — we don't need iOS).
+---
 
-## Step 1 — Install dependencies
+## Step 1 — Start the backend
 
-The Flutter project shell has already been scaffolded. From this folder:
+```powershell
+cd sentry_agent
 
-```bash
-flutter pub get
+# Option A: No Ollama installed — fully containerised (first run pulls ~9 GB)
+docker compose --profile with-ollama up --build
+
+# Option B: Ollama already installed natively (faster, uses GPU)
+ollama pull qwen2.5:7b-instruct
+docker compose up --build
 ```
 
-This downloads `flutter_riverpod`, `google_fonts`, and `intl`. Should take ~30 seconds.
+Wait until you see the agent print its startup banner:
 
-## Step 2 — Run
+```
+╭─────────────────────────────╮
+│   SentryAgent · serve       │
+│  Broker  broker:1883        │
+│  Ollama  http://...         │
+│  Model   qwen2.5:7b-instruct│
+│  DB      /data/sentry.db   │
+╰─────────────────────────────╯
+```
 
-Plug in your phone (USB debugging on) or start an emulator, then:
+---
+
+## Step 2 — Run the Flutter app
 
 ```bash
+cd sentryagent_app
+flutter pub get
 flutter run
 ```
 
-First build takes 1-2 minutes. After that, hot reload (press `r`) is instant.
+The first build takes 2–3 minutes (Gradle downloads). Subsequent runs are fast.
 
-## What you should see
+---
 
-**Splash:** pale background with the brand shield logo centered. A second later, the dashboard appears.
+## Step 3 — Connect to the broker
 
-**Dashboard:**
-- Top-left brand mark, top-right cyan ARMED pill
-- A drifting blue/violet/cyan glow behind a large ring with "0" and "SECURE" in the middle
-  - The ring has a slow scan-line sweeping clockwise (the system's heartbeat)
-  - On threat-level change the ring fires a brief halo pulse + a haptic
-- 2×2 grid of sensor tiles below: Motion (cyan), Sound (violet), Door (emerald), Temperature (coral)
-  - Each tile has a colored top stripe and a pulsing dot when active
-  - **Tap a tile → it Hero-flies into the Live Feed**
-- "Live feed →" link in the section header takes you to the same screen
-- Three quick-action cards: Test siren / Ask agent / View history (each one scales down on press + fires a tactile haptic)
-- An ARM card with a Disarm/Arm button (medium haptic on press)
+The app defaults to `10.0.2.2:1883` which works for the **Android emulator**.
 
-**Live Feed:**
-- 1m / 5m / 10m window picker
-- Sound waveform (smoothed area), temperature line chart, motion histogram, door state strip
-- Charts populate from the rolling buffer as samples arrive
+| Device | Broker host |
+|---|---|
+| Android emulator | `10.0.2.2` (default, no change needed) |
+| Physical Android on Wi-Fi | LAN IP of your laptop, e.g. `192.168.1.5` |
+| iOS simulator | `127.0.0.1` |
 
-**Reasoning:** three pre-seeded agent decisions; tap any → severity pill flies via Hero into the detail screen, full context + reasoning + tool calls
+To change it: open **Settings → Broker → Edit** in the app, enter the host,
+tap **Save**, then **Reconnect**.
 
-**History:** chronological events, search, filter chips
+The **ConnectionPill** in the top-right of the dashboard will turn green
+(`LIVE`) when connected.
 
-**Agent:** chat with suggestion chips; the send button fires a haptic and the agent replies after a typing-dots animation
+---
 
-**Settings:** toggles, sliders, system info, privacy posture block
+## Step 4 — Verify it's working
 
-Every action that matters is reinforced with a haptic — tab change (light), button press (medium), test siren / level transition to alert (heavy).
+In a separate terminal, tail the MQTT bus to watch data flow:
+
+```powershell
+docker compose -f sentry_agent/docker-compose.yml run --rm tools \
+  mosquitto_sub -h broker -t 'home/#' -v
+```
+
+You should see `home/sensors/*` readings and `home/agent/state` heartbeats
+every 5 seconds. When the mock scenario generates a warning event, you'll
+see `home/agent/decision` appear with the LLM's reasoning.
+
+Check the SQLite database is being written:
+
+```powershell
+docker exec sentry-agent sqlite3 /data/sentry.db \
+  "SELECT id, severity, message FROM events ORDER BY timestamp DESC LIMIT 5;"
+```
+
+---
+
+## Tear down
+
+```powershell
+# Stop everything, keep data (DB + Ollama model cache)
+docker compose --profile with-ollama down
+
+# Stop everything AND wipe all data
+docker compose --profile with-ollama down -v
+```
+
+---
 
 ## Troubleshooting
 
-**`flutter pub get` fails:** Check your Flutter SDK version with `flutter --version`. If it's below 3.27, run `flutter upgrade`.
+**App shows OFFLINE / NO BROKER**
+- Confirm Docker containers are running: `docker ps`
+- Check you're using the right broker host for your device type (see Step 3)
+- Tap **Settings → Reconnect**
 
-**Build fails with "Gradle" errors:** Open the `android/` folder in Android Studio once, let it index, then close it. Flutter sometimes needs Android Studio to seed the Gradle cache.
+**First run takes forever**
+- Ollama image (~4 GB) + model weights (~4.5 GB) download once and are cached.
+  Subsequent starts are seconds.
 
-**Emulator very slow:** Use a real device. Emulators on low-RAM machines are painful.
-
-**Fonts look like the system default:** Plus Jakarta Sans is downloaded on first run from Google Fonts; needs internet on first launch. After that, fonts are cached locally.
-
-## When it works
-
-Don't add features yet. Read the code top-down:
-
-1. `lib/main.dart` — entry point
-2. `lib/core/theme/` — colors, spacing, shadows, theme
-3. `lib/core/providers.dart` — Riverpod glue (the swap point for MQTT later)
-4. `lib/core/haptics.dart` + `lib/core/transitions.dart` — feel-of-the-app primitives
-5. `lib/core/widgets/` — `SoftCard`, `PressScale`, `SeverityPill`, `SensorIconChip`
-6. `lib/data/models/security_state.dart` — the domain
-7. `lib/data/sources/mock_data_source.dart` — how the fake data is generated
-8. `lib/features/shell/main_shell.dart` — the bottom nav
-9. `lib/features/dashboard/` — Dashboard + ThreatRing + SensorTile + HeroBackdrop
-10. `lib/features/live_feed/live_feed_screen.dart` — fl_chart-powered rolling buffers
-11. `lib/features/reasoning/` — Reasoning Log + Decision Detail
-12. `lib/features/history/history_screen.dart`
-13. `lib/features/agent_console/agent_console_screen.dart`
-14. `lib/features/settings/settings_screen.dart`
-
-Android assets:
-
-15. `android/app/src/main/res/drawable/ic_launcher_*.xml` — adaptive launcher icon (vector)
-16. `android/app/src/main/res/drawable/launch_background.xml` — splash screen (background + centered shield)
-17. `android/app/src/main/res/drawable/splash_logo.xml` — the splash shield vector
-
-If a line confuses you, ask. You need to be able to defend every line in your viva.
+**`flutter run` fails on Gradle**
+- Stop any running Gradle daemons: `.\android\gradlew.bat --stop`
+- Delete stale locks: `Get-ChildItem android\.gradle -Recurse -Filter *.lock | Remove-Item`
+- Run `flutter run` again
