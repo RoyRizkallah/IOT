@@ -24,8 +24,10 @@ logs/
 secrets.yaml
 *.local.yaml
 
-# Local data / caches that fell through subproject gitignores
-data/
+# Local runtime SQLite data (scoped: only the backend's data/ folder,
+# NOT sentryagent_app/lib/data which holds source code).
+/sentry_agent/data/
+/data/
 *.db
 *.db-wal
 *.db-shm
