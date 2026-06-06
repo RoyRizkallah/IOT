@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/haptics.dart';
+import '../../core/notifications.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_shadows.dart';
@@ -40,8 +41,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         switch (newLvl) {
           case ThreatLevel.warning:
             Haptics.warning();
+            showAlertNotification(
+              title: '⚠️ SentryAgent Warning',
+              body: 'Threat level elevated — check the dashboard.',
+              highPriority: false,
+            );
           case ThreatLevel.alert:
             Haptics.alert();
+            showAlertNotification(
+              title: '🚨 SentryAgent Alert',
+              body: 'Security alert detected! Review the dashboard now.',
+            );
           case ThreatLevel.safe:
             Haptics.tap();
         }
@@ -687,8 +697,8 @@ class _ArmCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   armed
-                      ? 'Sensors monitored. Agent will react.'
-                      : 'Tap arm to resume monitoring.',
+                      ? 'Agent is active. Threats will trigger alerts.'
+                      : 'Sensors still stream data — no alerts will fire.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],

@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../core/haptics.dart';
@@ -30,6 +32,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   final _frame = ValueNotifier<Uint8List?>(null);
   final _status = ValueNotifier<_CamStatus>(_CamStatus.connecting);
   final _fps = ValueNotifier<int>(0);
+  final _now = ValueNotifier<DateTime>(DateTime.now());
+  final _resolution = ValueNotifier<String?>(null);
 
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _sub;
@@ -40,6 +44,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   int _totalFrames = 0;
   DateTime? _lastFrameAt;
   bool _disposed = false;
+  bool _decodingDims = false;
 
   @override
   void initState() {
@@ -57,10 +62,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     _frame.dispose();
     _status.dispose();
     _fps.dispose();
+    _now.dispose();
+    _resolution.dispose();
     super.dispose();
   }
 
   void _onTick() {
+    _now.value = DateTime.now();
     _fps.value = _framesThisSecond;
     _framesThisSecond = 0;
     // Recompute "live" — connected but no frame for >2s means the relay is up
@@ -113,6 +121,21 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     _totalFrames++;
     _lastFrameAt = DateTime.now();
     if (_totalFrames > 1) _status.value = _CamStatus.live;
+    _maybeReadDimensions(bytes);
+  }
+
+  // Decode the true frame size once so the details panel can show a real
+  // resolution instead of a hardcoded guess. Cheap: runs only until we know it.
+  void _maybeReadDimensions(Uint8List bytes) {
+    if (_resolution.value != null || _decodingDims) return;
+    _decodingDims = true;
+    ui.decodeImageFromList(bytes, (image) {
+      if (!_disposed) {
+        _resolution.value = '${image.width}×${image.height}';
+      }
+      image.dispose();
+      _decodingDims = false;
+    });
   }
 
   void _scheduleReconnect() {
@@ -128,6 +151,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   void _manualReconnect() {
     Haptics.tap();
     _totalFrames = 0;
+    _resolution.value = null;
     if (_url != null) _connect(_url!);
   }
 
@@ -158,7 +182,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
             const SizedBox(height: AppSpacing.md),
             _viewport(context),
             const SizedBox(height: AppSpacing.md),
-            _infoCard(context, url),
+            _detailsCard(context),
           ],
         ),
       ),
@@ -231,6 +255,22 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                   );
                 },
               ),
+              // Subtle top gradient so overlays stay legible over bright frames.
+              const Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 64,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.black54, Colors.transparent],
+                    ),
+                  ),
+                ),
+              ),
               // Top-left LIVE badge.
               Positioned(
                 top: 10,
@@ -238,6 +278,27 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                 child: ValueListenableBuilder<_CamStatus>(
                   valueListenable: _status,
                   builder: (_, s, __) => _LiveBadge(status: s),
+                ),
+              ),
+              // Top-right CCTV-style live timestamp.
+              Positioned(
+                top: 10,
+                right: 10,
+                child: ValueListenableBuilder<DateTime>(
+                  valueListenable: _now,
+                  builder: (_, t, __) => Text(
+                    DateFormat('yyyy-MM-dd  HH:mm:ss').format(t),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'monospace',
+                      letterSpacing: 0.4,
+                      shadows: [
+                        Shadow(blurRadius: 4, color: Colors.black87),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               // Bottom strip: fps + tap-to-expand hint.
@@ -269,7 +330,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     );
   }
 
-  Widget _infoCard(BuildContext context, String url) {
+  Widget _detailsCard(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.bgSurface,
@@ -283,84 +344,113 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
           Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: AppColors.sensorMotionSoft,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: const Icon(Icons.videocam_rounded,
-                    size: 18, color: AppColors.sensorMotion),
+                    size: 20, color: AppColors.sensorMotion),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: Text(
-                  'Relay endpoint',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Entrance Camera',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    Text(
+                      'Indoor · Raspberry Pi',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                 ),
               ),
-              IconButton(
-                onPressed: () => _editCamera(context),
-                icon: const Icon(Icons.tune_rounded,
-                    size: 20, color: AppColors.textSecondary),
-                tooltip: 'Configure',
+              _RoundIconButton(
+                icon: Icons.refresh_rounded,
+                tooltip: 'Reconnect',
+                onTap: _manualReconnect,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              _RoundIconButton(
+                icon: Icons.settings_outlined,
+                tooltip: 'Camera settings',
+                onTap: () => _editCamera(context),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.bgMuted,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-            ),
-            child: Text(
-              url,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontFamily: 'monospace',
-                    color: AppColors.textSecondary,
-                  ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'On the Pi, start the streamer pointing at this laptop:',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 4),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.bgMuted,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-            ),
-            child: Text(
-              'python3 pi_camera_streamer.py --host <laptop-ip> --port '
-              '${ref.read(cameraConfigProvider).port}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontFamily: 'monospace',
-                    color: AppColors.textSecondary,
-                  ),
-            ),
-          ),
           const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _manualReconnect,
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Reconnect'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm + 2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
+          Row(
+            children: [
+              Expanded(
+                child: ValueListenableBuilder<_CamStatus>(
+                  valueListenable: _status,
+                  builder: (_, s, __) {
+                    final live = s == _CamStatus.live;
+                    return _StatTile(
+                      icon: live
+                          ? Icons.sensors_rounded
+                          : Icons.sensors_off_rounded,
+                      label: 'Status',
+                      value: switch (s) {
+                        _CamStatus.live => 'Streaming',
+                        _CamStatus.connecting => 'Connecting',
+                        _CamStatus.waiting => 'Standby',
+                        _CamStatus.offline => 'Offline',
+                      },
+                      color: live
+                          ? AppColors.threatSafe
+                          : (s == _CamStatus.offline
+                              ? AppColors.threatAlert
+                              : AppColors.threatWarning),
+                    );
+                  },
                 ),
               ),
-            ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _fps,
+                  builder: (_, fps, __) => _StatTile(
+                    icon: Icons.speed_rounded,
+                    label: 'Frame rate',
+                    value: '$fps fps',
+                    color: AppColors.sensorMotion,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: ValueListenableBuilder<String?>(
+                  valueListenable: _resolution,
+                  builder: (_, res, __) => _StatTile(
+                    icon: Icons.hd_rounded,
+                    label: 'Resolution',
+                    value: res ?? '—',
+                    color: AppColors.sensorSound,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              const Icon(Icons.lock_rounded,
+                  size: 13, color: AppColors.textTertiary),
+              const SizedBox(width: 6),
+              Text(
+                'Private stream · stays on your local network',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textTertiary,
+                    ),
+              ),
+            ],
           ),
         ],
       ),
@@ -543,6 +633,92 @@ class _GlassChip extends StatelessWidget {
   }
 }
 
+class _StatTile extends StatelessWidget {
+  const _StatTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.bgMuted,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(height: 6),
+          Text(
+            label.toUpperCase(),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppColors.textTertiary,
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w700,
+                ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 1),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoundIconButton extends StatelessWidget {
+  const _RoundIconButton({
+    required this.icon,
+    required this.onTap,
+    required this.tooltip,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: AppColors.bgMuted,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(9),
+            child: Icon(icon, size: 18, color: AppColors.textSecondary),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.status});
   final _CamStatus status;
@@ -642,7 +818,7 @@ class _CameraEditSheetState extends State<_CameraEditSheet> {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Camera relay',
+              'Camera settings',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.3,
@@ -650,7 +826,7 @@ class _CameraEditSheetState extends State<_CameraEditSheet> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Leave host empty to reuse the MQTT broker host.',
+              'Leave host empty to use your hub automatically.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: AppSpacing.lg),

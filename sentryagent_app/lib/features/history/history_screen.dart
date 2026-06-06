@@ -67,7 +67,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final eventsAsync = ref.watch(eventsProvider);
+    final stateAsync = ref.watch(securityStateProvider);
     final now = DateTime.now();
+    final isArmed = stateAsync.valueOrNull?.armed ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.bgBase,
@@ -147,6 +149,40 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     ),
                   ),
                 ),
+                if (!isArmed)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm + 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.bgMuted,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.shield_outlined,
+                                size: 16, color: AppColors.textTertiary),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                'System disarmed — events are logged as activity. Arm the system to enable threat alerts.',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: AppColors.textSecondary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 if (filtered.isEmpty)
                   const SliverFillRemaining(
                     hasScrollBody: false,

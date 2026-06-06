@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:flutter_markdown/flutter_markdown.dart';
+
 import '../../core/format.dart';
 import '../../core/haptics.dart';
 import '../../core/providers.dart';
@@ -424,12 +426,27 @@ class _AgentBubble extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            message.text,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.textPrimary,
-                  height: 1.45,
-                ),
+          MarkdownBody(
+            data: message.text,
+            styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+              p: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.textPrimary,
+                    height: 1.45,
+                  ),
+              strong: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    height: 1.45,
+                  ),
+              listBullet: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.textPrimary,
+                    height: 1.45,
+                  ),
+              blockquoteDecoration: BoxDecoration(
+                color: AppColors.bgMuted,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
           ),
           const SizedBox(height: 4),
           Text(

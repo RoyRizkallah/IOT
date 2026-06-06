@@ -33,6 +33,15 @@ dependencies:
   # Persists the broker host/port between launches.
   shared_preferences: ^2.3.0
 
+  # Renders markdown in agent chat replies.
+  flutter_markdown: ^0.7.7
+
+  # Local push notifications — alerts even when app is in background.
+  flutter_local_notifications: ^18.0.1
+
+  # Foreground service — keeps MQTT alive when phone is locked.
+  flutter_foreground_task: ^8.15.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
