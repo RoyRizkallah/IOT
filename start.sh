@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # SentryAgent — one-command demo bringup (Linux / macOS).
 #
+# No fake data by default — the Raspberry Pi is the data source. Set MOCK=1 for
+# a laptop-only run (adds the simulated sensor publisher).
+#
 # Usage:
-#   ./start.sh                    # default flow
+#   ./start.sh                    # real-Pi stack (broker + agent + camera)
+#   MOCK=1 ./start.sh             # also start the simulated sensor publisher
 #   MODEL=llama3 ./start.sh       # pick a different Ollama model
 #   SKIP_OLLAMA=1 ./start.sh      # don't touch Ollama
 #   LAUNCH_APP=1 ./start.sh       # also `flutter run` after the stack is up
@@ -13,6 +17,7 @@ BACKEND_DIR="$SCRIPT_DIR/sentry_agent"
 APP_DIR="$SCRIPT_DIR/sentryagent_app"
 MODEL="${MODEL:-qwen2.5:7b-instruct}"
 SKIP_OLLAMA="${SKIP_OLLAMA:-}"
+MOCK="${MOCK:-}"
 LAUNCH_APP="${LAUNCH_APP:-}"
 
 cyan()   { printf "\033[36m%s\033[0m" "$1"; }
@@ -62,13 +67,22 @@ else
 fi
 
 # ─── 3. Bring up the stack ──────────────────────────────────────────────────
-step "3/5" "Starting broker + sensors + agent..."
 cd "$BACKEND_DIR"
-if [ "$USE_NATIVE" = "1" ] || [ -n "$SKIP_OLLAMA" ]; then
-    docker compose up -d --build broker sensors agent
+SERVICES=(broker agent camera)
+COMPOSE_ARGS=()
+if [ -n "$MOCK" ]; then
+    SERVICES+=(sensors)
+    COMPOSE_ARGS+=(--profile mock)
+    step "3/5" "Starting broker + agent + camera + mock sensors..."
 else
+    step "3/5" "Starting broker + agent + camera..."
+fi
+if [ "$USE_NATIVE" = "1" ] || [ -n "$SKIP_OLLAMA" ]; then
+    docker compose "${COMPOSE_ARGS[@]+"${COMPOSE_ARGS[@]}"}" up -d --build "${SERVICES[@]}"
+else
+    SERVICES+=(ollama)
     SENTRY_OLLAMA_BASE_URL="http://ollama:11434" \
-        docker compose --profile with-ollama up -d --build broker sensors agent ollama
+        docker compose "${COMPOSE_ARGS[@]+"${COMPOSE_ARGS[@]}"}" --profile with-ollama up -d --build "${SERVICES[@]}"
 fi
 ok "Containers started"
 
@@ -109,7 +123,12 @@ if [ -z "$SKIP_OLLAMA" ]; then
     fi
 fi
 echo "  Agent       sentry-agent  (logs: docker logs -f sentry-agent)"
-echo "  Sensors     sentry-sensors  (mock publisher)"
+echo "  Camera      sentry-camera  (relay on http://localhost:8000/)"
+if [ -n "$MOCK" ]; then
+    echo "  Sensors     sentry-sensors  (mock publisher)"
+else
+    echo "  Sensors     waiting for the Raspberry Pi on iot/pi/telemetry"
+fi
 echo ""
 echo "  Tail the bus traffic:"
 echo "    docker compose -f sentry_agent/docker-compose.yml run --rm tools"

@@ -5,13 +5,17 @@
 #   2. Detects whether you have native Ollama running on :11434.
 #        - If yes: reuses it (faster, GPU passthrough).
 #        - If no:  brings up a containerised Ollama and pulls the model.
-#   3. Starts the broker, mock sensors, and agent containers.
+#   3. Starts the broker, agent, and camera relay (the real-Pi stack).
 #   4. Prints a status summary and the next command to run for Flutter.
 #
+# No fake data by default — the Raspberry Pi is the data source. Use -Mock for
+# a laptop-only run without the Pi.
+#
 # Usage:
-#   .\start.ps1                 # default flow
+#   .\start.ps1                 # real-Pi stack (broker + agent + camera)
+#   .\start.ps1 -Mock           # also start the simulated sensor publisher
 #   .\start.ps1 -Model llama3   # pick a different Ollama model
-#   .\start.ps1 -SkipOllama     # do not touch Ollama (sensor-only smoke test)
+#   .\start.ps1 -SkipOllama     # do not touch Ollama (transport-only smoke test)
 #   .\start.ps1 -LaunchApp      # also run `flutter run` after the stack is up
 #
 # Tear down with: .\stop.ps1
@@ -20,6 +24,7 @@
 param(
     [string]$Model = "qwen2.5:7b-instruct",
     [switch]$SkipOllama,
+    [switch]$Mock,
     [switch]$LaunchApp
 )
 
@@ -104,17 +109,25 @@ if ($SkipOllama) {
 # Docker writes build progress to stderr; we route it through 2>&1 so
 # PowerShell's "Stop" preference does not abort on what is just informational.
 
-Write-Step "3/5" "Starting broker + sensors + agent..."
+$stackDesc = if ($Mock) { "broker + agent + camera + mock sensors" } else { "broker + agent + camera" }
+Write-Step "3/5" "Starting $stackDesc..."
 Push-Location $BackendDir
 $prevPref = $ErrorActionPreference
 $ErrorActionPreference = "Continue"
 try {
-    if ($useNative -or $SkipOllama) {
-        & docker compose up -d --build broker sensors agent 2>&1 | ForEach-Object { Write-Host "      $_" -ForegroundColor DarkGray }
-    } else {
+    $services = @("broker", "agent", "camera")
+    $profiles = @()
+    if ($Mock) { $services += "sensors"; $profiles += "mock" }
+    if (-not ($useNative -or $SkipOllama)) {
         $env:SENTRY_OLLAMA_BASE_URL = "http://ollama:11434"
-        & docker compose --profile with-ollama up -d --build broker sensors agent ollama 2>&1 | ForEach-Object { Write-Host "      $_" -ForegroundColor DarkGray }
+        $services += "ollama"
+        $profiles += "with-ollama"
     }
+    $composeArgs = @("compose")
+    foreach ($p in $profiles) { $composeArgs += @("--profile", $p) }
+    $composeArgs += @("up", "-d", "--build")
+    $composeArgs += $services
+    & docker @composeArgs 2>&1 | ForEach-Object { Write-Host "      $_" -ForegroundColor DarkGray }
     if ($LASTEXITCODE -ne 0) {
         Write-Err "docker compose up failed (exit $LASTEXITCODE)"
         $ErrorActionPreference = $prevPref
@@ -175,7 +188,12 @@ if (-not $SkipOllama) {
     }
 }
 Write-Host "  Agent       sentry-agent  (logs: docker logs -f sentry-agent)" -ForegroundColor White
-Write-Host "  Sensors     sentry-sensors  (mock publisher, default scenario)" -ForegroundColor White
+Write-Host "  Camera      sentry-camera  (relay on http://localhost:8000/)" -ForegroundColor White
+if ($Mock) {
+    Write-Host "  Sensors     sentry-sensors  (mock publisher, default scenario)" -ForegroundColor White
+} else {
+    Write-Host "  Sensors     waiting for the Raspberry Pi on iot/pi/telemetry" -ForegroundColor White
+}
 Write-Host ""
 Write-Host "  Tail the bus traffic:" -ForegroundColor DarkGray
 Write-Host "    docker compose -f sentry_agent/docker-compose.yml run --rm tools" -ForegroundColor DarkGray

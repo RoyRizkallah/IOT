@@ -32,8 +32,8 @@ class _AgentConsoleScreenState extends ConsumerState<AgentConsoleScreen> {
       text: 'What happened last night?',
     ),
     _Suggestion(
-      icon: Icons.sensor_door_outlined,
-      text: 'Is the back door closed?',
+      icon: Icons.directions_walk_rounded,
+      text: 'Any motion while I was out?',
     ),
     _Suggestion(
       icon: Icons.today_rounded,
@@ -294,17 +294,6 @@ class _Header extends StatelessWidget {
                   ],
                 ),
               ],
-            ),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.more_horiz_rounded,
-              color: AppColors.textSecondary,
-            ),
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.bgSurface,
-              shape: const CircleBorder(),
             ),
           ),
         ],
@@ -721,15 +710,7 @@ class _Composer extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(6, 4, 4, 4),
           child: Row(
             children: [
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(
-                  Icons.add_circle_outline_rounded,
-                  color: AppColors.textTertiary,
-                  size: 22,
-                ),
-                tooltip: 'Attach',
-              ),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: TextField(
                   controller: controller,

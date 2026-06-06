@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_spacing.dart';
 import '../agent_console/agent_console_screen.dart';
+import '../camera/camera_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../history/history_screen.dart';
 import '../reasoning/reasoning_log_screen.dart';
@@ -27,6 +28,7 @@ class MainShell extends ConsumerStatefulWidget {
 class _MainShellState extends ConsumerState<MainShell> {
   static const _tabs = <_TabItem>[
     _TabItem(icon: Icons.shield_rounded, label: 'Home'),
+    _TabItem(icon: Icons.videocam_rounded, label: 'Camera'),
     _TabItem(icon: Icons.psychology_rounded, label: 'Reasoning'),
     _TabItem(icon: Icons.bar_chart_rounded, label: 'History'),
     _TabItem(icon: Icons.chat_bubble_rounded, label: 'Agent'),
@@ -35,6 +37,7 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   static const _screens = <Widget>[
     DashboardScreen(),
+    CameraScreen(),
     ReasoningLogScreen(),
     HistoryScreen(),
     AgentConsoleScreen(),

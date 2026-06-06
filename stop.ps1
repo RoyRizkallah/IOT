@@ -19,7 +19,7 @@ Push-Location $BackendDir
 $prevPref = $ErrorActionPreference
 $ErrorActionPreference = "Continue"
 try {
-    $cmdArgs = @("--profile", "with-ollama", "--profile", "tools", "down")
+    $cmdArgs = @("--profile", "with-ollama", "--profile", "tools", "--profile", "mock", "down", "--remove-orphans")
     if ($Wipe) {
         $cmdArgs += "--volumes"
         Write-Host "       (wiping volumes - Ollama model and broker history will be re-fetched)" -ForegroundColor Yellow

@@ -262,7 +262,8 @@ class MqttDataSource implements SecurityDataSource {
   }
 
   void _handleEvent(Map<String, dynamic> j) {
-    final ev = SecurityEvent.fromJson(j);
+    final ev = SecurityEvent.fromJsonOrNull(j);
+    if (ev == null) return; // sensor type we don't render
     if (_events.any((e) => e.id == ev.id)) return;
     _events.insert(0, ev);
     if (_events.length > 200) _events.removeRange(200, _events.length);
@@ -296,7 +297,8 @@ class MqttDataSource implements SecurityDataSource {
       ..clear()
       ..addAll(
         eventsJson
-            .map((e) => SecurityEvent.fromJson(e as Map<String, dynamic>))
+            .map((e) => SecurityEvent.fromJsonOrNull(e as Map<String, dynamic>))
+            .whereType<SecurityEvent>()
             .toList(growable: false),
       );
     _emitEvents();

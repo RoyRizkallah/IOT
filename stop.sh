@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/sentry_agent"
 
 echo "[stop] Tearing down SentryAgent stack..."
-args=(--profile with-ollama --profile tools down)
+args=(--profile with-ollama --profile tools --profile mock down --remove-orphans)
 if [ -n "${WIPE:-}" ]; then
     args+=(--volumes)
     echo "       (wiping volumes — Ollama model and broker history will be re-fetched)"

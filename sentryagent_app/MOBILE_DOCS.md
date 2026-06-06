@@ -205,6 +205,15 @@ app was closed for hours.
 - Searchable, filterable (`All / Today / This Week / Critical`) event log.
 - Tap an event → `EventDetailSheet` bottom sheet.
 
+### Camera (live feed)
+- Connects to the camera relay over WebSocket (`cameraViewUrlProvider` →
+  `ws://<host>:<port>/ws/camera/view`) and renders binary JPEG frames via
+  `Image.memory(gaplessPlayback: true)`.
+- Host defaults to the broker host (relay runs on the same laptop); port `8000`,
+  both configurable (Camera tab → tune icon, persisted as `CameraConfig`).
+- Status pill (LIVE / NO SIGNAL / CONNECTING / OFFLINE), live fps counter,
+  auto-reconnect, and tap-to-fullscreen with pinch zoom.
+
 ### Reasoning Log
 - List of `AgentDecision` cards. Tap → Hero animation on the severity pill
   into `DecisionDetailScreen` showing context, reasoning, tool calls.

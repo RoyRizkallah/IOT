@@ -225,7 +225,7 @@ def build_tools(ctx: ToolContext) -> list[Tool]:
             name="query_sensor_state",
             description=(
                 "Read the current value of a single sensor. Useful when reasoning "
-                "needs the latest reading (e.g. is the door currently open?)."
+                "needs the latest reading (e.g. is motion currently active?)."
             ),
             parameters={
                 "type": "object",
@@ -308,7 +308,7 @@ def build_tools(ctx: ToolContext) -> list[Tool]:
             name="mute_sensor",
             description=(
                 "Temporarily silence a sensor when its readings are clearly noise "
-                "(e.g. a door sensor flapping in the wind)."
+                "(e.g. a motion sensor re-triggering from a moving curtain)."
             ),
             parameters={
                 "type": "object",

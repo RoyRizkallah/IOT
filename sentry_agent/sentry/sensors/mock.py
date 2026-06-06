@@ -1,15 +1,16 @@
 """Mock sensor publisher.
 
 Pretends to be the Pi: emits realistic-looking readings on
-`home/sensors/<type>` topics until killed.
+`home/sensors/<type>` topics until killed. It only emits the sensors the
+real Pi has — motion, sound, temperature (no door sensor on this hardware).
 
 Three scenario modes:
 
-  - "default"        — sleepy household, occasional motion, the odd door,
-                       gentle temperature drift
-  - "suspicious"     — periodic suspicious bursts (motion + sound + door
-                       at the same time, after midnight)
-  - "flapping"       — a door that keeps cycling (sensor noise demo)
+  - "default"        — sleepy household, occasional motion, gentle
+                       temperature drift, the odd sound spike
+  - "suspicious"     — periodic suspicious bursts (motion + sound at the
+                       same time, after midnight)
+  - "flapping"       — motion that keeps re-triggering (sensor noise demo)
 
 Pick the scenario with `--scenario`. The default is good enough to drive
 the agent through all three severity bands within a couple of minutes.
@@ -49,7 +50,6 @@ class MockSensorPublisher:
         self._speed = max(0.1, speed)
 
         self._stop = asyncio.Event()
-        self._door_open = False
         self._temp_c = 21.5
 
     # ─────────────────────────────────────────────────────────────────
@@ -60,7 +60,6 @@ class MockSensorPublisher:
             asyncio.create_task(self._loop_temperature(), name="temperature"),
             asyncio.create_task(self._loop_sound(), name="sound"),
             asyncio.create_task(self._loop_motion(), name="motion"),
-            asyncio.create_task(self._loop_door(), name="door"),
         ]
         if self._scenario == "suspicious":
             loop_tasks.append(
@@ -126,50 +125,35 @@ class MockSensorPublisher:
                 await self._sleep(random.uniform(2.0, 4.0))
                 await self._publish(SensorType.motion, 0.0, active=False)
 
-    async def _loop_door(self) -> None:
-        """Rare door cycles (well-behaved in default mode)."""
-        while not self._stop.is_set():
-            await self._sleep(random.uniform(40.0, 90.0))
-            await self._toggle_door()
-            await self._sleep(random.uniform(3.0, 8.0))
-            await self._toggle_door()
-
     # ─────────────────────────────────────────────────────────────────
     # Scenarios
     # ─────────────────────────────────────────────────────────────────
 
     async def _scenario_suspicious(self) -> None:
-        """Every 30s, fire motion + sound + door simultaneously."""
+        """Every 30s, fire motion + sound simultaneously."""
         await self._sleep(8.0)
         while not self._stop.is_set():
-            logger.info("⚠ scenario_suspicious: triggering corroborated event")
+            logger.info("scenario_suspicious: triggering corroborated event")
             await asyncio.gather(
                 self._publish(SensorType.motion, 1.0, active=True),
                 self._publish(SensorType.sound, random.uniform(65, 82), active=True),
-                self._toggle_door(),
             )
             await self._sleep(2.5)
             await self._publish(SensorType.motion, 0.0, active=False)
             await self._sleep(30.0)
 
     async def _scenario_flapping(self) -> None:
-        """Door cycles every ~6 seconds — looks like sensor noise."""
+        """Motion re-triggers every ~6 seconds — looks like sensor noise."""
         await self._sleep(5.0)
         while not self._stop.is_set():
-            await self._toggle_door()
+            await self._publish(SensorType.motion, 1.0, active=True)
+            await self._sleep(random.uniform(1.0, 2.0))
+            await self._publish(SensorType.motion, 0.0, active=False)
             await self._sleep(random.uniform(4.0, 8.0))
 
     # ─────────────────────────────────────────────────────────────────
     # Helpers
     # ─────────────────────────────────────────────────────────────────
-
-    async def _toggle_door(self) -> None:
-        self._door_open = not self._door_open
-        await self._publish(
-            SensorType.door,
-            1.0 if self._door_open else 0.0,
-            active=self._door_open,
-        )
 
     async def _publish(
         self,

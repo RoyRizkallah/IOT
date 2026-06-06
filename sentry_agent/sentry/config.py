@@ -57,12 +57,24 @@ class StorageConfig:
 
 
 @dataclass
+class PiBridgeConfig:
+    """Translates the physical Raspberry Pi's combined telemetry message
+    (`iot/pi/telemetry`) into internal per-sensor readings. Disable to run
+    purely on the mock `home/sensors/*` publishers."""
+
+    enabled: bool = True
+    telemetry_topic: str = "iot/pi/telemetry"
+    noise_threshold: float = 400.0
+
+
+@dataclass
 class Config:
     llm: LLMConfig
     agent: AgentConfig
     mqtt: MqttConfig
     logging: LoggingConfig
     storage: StorageConfig
+    pi_bridge: PiBridgeConfig
 
     @classmethod
     def load(cls, path: str | Path) -> Config:
@@ -74,6 +86,7 @@ class Config:
             mqtt=MqttConfig(**(raw.get("mqtt") or {})),
             logging=LoggingConfig(**(raw.get("logging") or {})),
             storage=StorageConfig(**(raw.get("storage") or {})),
+            pi_bridge=PiBridgeConfig(**(raw.get("pi_bridge") or {})),
         )
         cfg.apply_env_overrides()
         return cfg
@@ -86,6 +99,7 @@ class Config:
             mqtt=MqttConfig(),
             logging=LoggingConfig(),
             storage=StorageConfig(),
+            pi_bridge=PiBridgeConfig(),
         )
         cfg.apply_env_overrides()
         return cfg
@@ -108,3 +122,7 @@ class Config:
             self.logging.level = v
         if v := os.getenv("SENTRY_DB_PATH"):
             self.storage.db_path = v
+        if v := os.getenv("SENTRY_PI_BRIDGE"):
+            self.pi_bridge.enabled = v.lower() in ("1", "true", "yes")
+        if v := os.getenv("SENTRY_PI_NOISE_THRESHOLD"):
+            self.pi_bridge.noise_threshold = float(v)

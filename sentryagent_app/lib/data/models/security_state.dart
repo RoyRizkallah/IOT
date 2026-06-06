@@ -6,34 +6,37 @@
 
 import 'dart:convert';
 
-/// The four sensors we monitor.
+/// The sensors we monitor. These mirror what the Raspberry Pi actually
+/// reports (PIR motion, sound, DHT temperature). Unknown wire values are
+/// ignored by the tolerant `fromWireOrNull` parser.
 enum SensorType {
   motion,
   sound,
-  door,
   temperature;
 
-  static SensorType fromWire(String wire) => switch (wire) {
+  /// Returns null for sensor types this build doesn't render (so legacy or
+  /// unexpected readings are dropped instead of crashing the UI).
+  static SensorType? fromWireOrNull(String wire) => switch (wire) {
         'motion' => SensorType.motion,
         'sound' => SensorType.sound,
-        'door' => SensorType.door,
         'temperature' => SensorType.temperature,
-        _ => throw ArgumentError('Unknown sensor type: $wire'),
+        _ => null,
       };
+
+  static SensorType fromWire(String wire) =>
+      fromWireOrNull(wire) ?? (throw ArgumentError('Unknown sensor type: $wire'));
 
   String get wire => name;
 
   String get displayName => switch (this) {
         SensorType.motion => 'Motion',
         SensorType.sound => 'Sound',
-        SensorType.door => 'Door',
         SensorType.temperature => 'Temperature',
       };
 
   String get unit => switch (this) {
         SensorType.motion => '',
         SensorType.sound => 'dB',
-        SensorType.door => '',
         SensorType.temperature => '°C',
       };
 }
@@ -86,6 +89,18 @@ class SensorReading {
         active: (j['active'] as bool?) ?? false,
         timestamp: DateTime.parse(j['timestamp'] as String).toLocal(),
       );
+
+  /// Tolerant variant: returns null when the sensor type isn't one we render.
+  static SensorReading? fromJsonOrNull(Map<String, dynamic> j) {
+    final type = SensorType.fromWireOrNull(j['type'] as String);
+    if (type == null) return null;
+    return SensorReading(
+      type: type,
+      value: (j['value'] as num).toDouble(),
+      active: (j['active'] as bool?) ?? false,
+      timestamp: DateTime.parse(j['timestamp'] as String).toLocal(),
+    );
+  }
 }
 
 /// A discrete security event.
@@ -114,6 +129,20 @@ class SecurityEvent {
         timestamp: DateTime.parse(j['timestamp'] as String).toLocal(),
         rawValue: (j['raw_value'] as num?)?.toDouble(),
       );
+
+  /// Tolerant variant: returns null for events from a sensor we don't render.
+  static SecurityEvent? fromJsonOrNull(Map<String, dynamic> j) {
+    final sensor = SensorType.fromWireOrNull(j['sensor'] as String);
+    if (sensor == null) return null;
+    return SecurityEvent(
+      id: j['id'] as String,
+      sensor: sensor,
+      severity: ThreatLevel.fromWire(j['severity'] as String),
+      message: j['message'] as String,
+      timestamp: DateTime.parse(j['timestamp'] as String).toLocal(),
+      rawValue: (j['raw_value'] as num?)?.toDouble(),
+    );
+  }
 }
 
 /// One agent decision — what context it saw, how it reasoned, what it did.
@@ -272,7 +301,8 @@ class SecurityState {
         armed: (j['armed'] as bool?) ?? false,
         threatScore: (j['threat_score'] as num?)?.toInt() ?? 0,
         readings: ((j['readings'] as List?) ?? const [])
-            .map((e) => SensorReading.fromJson(e as Map<String, dynamic>))
+            .map((e) => SensorReading.fromJsonOrNull(e as Map<String, dynamic>))
+            .whereType<SensorReading>()
             .toList(growable: false),
         lastUpdate: DateTime.parse(
           j['last_update'] as String,
@@ -288,7 +318,6 @@ class SecurityState {
       readings: [
         SensorReading(type: SensorType.motion, value: 0, active: false, timestamp: now),
         SensorReading(type: SensorType.sound, value: 32, active: false, timestamp: now),
-        SensorReading(type: SensorType.door, value: 0, active: false, timestamp: now),
         SensorReading(type: SensorType.temperature, value: 22.4, active: false, timestamp: now),
       ],
       lastUpdate: now,

@@ -11,21 +11,18 @@ class SensorMeta {
   static IconData icon(SensorType t) => switch (t) {
         SensorType.motion => Icons.directions_walk_rounded,
         SensorType.sound => Icons.graphic_eq_rounded,
-        SensorType.door => Icons.sensor_door_outlined,
         SensorType.temperature => Icons.thermostat_rounded,
       };
 
   static Color color(SensorType t) => switch (t) {
         SensorType.motion => AppColors.sensorMotion,
         SensorType.sound => AppColors.sensorSound,
-        SensorType.door => AppColors.sensorDoor,
         SensorType.temperature => AppColors.sensorTemp,
       };
 
   static Color colorSoft(SensorType t) => switch (t) {
         SensorType.motion => AppColors.sensorMotionSoft,
         SensorType.sound => AppColors.sensorSoundSoft,
-        SensorType.door => AppColors.sensorDoorSoft,
         SensorType.temperature => AppColors.sensorTempSoft,
       };
 }

@@ -27,8 +27,6 @@ class SensorTile extends StatelessWidget {
     switch (reading.type) {
       case SensorType.motion:
         return reading.active ? 'DETECTED' : 'CLEAR';
-      case SensorType.door:
-        return reading.active ? 'OPEN' : 'CLOSED';
       case SensorType.sound:
         return '${reading.value.toStringAsFixed(0)}${reading.type.unit}';
       case SensorType.temperature:

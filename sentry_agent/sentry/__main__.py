@@ -44,6 +44,12 @@ app = typer.Typer(
 console = Console(safe_box=True)
 
 
+def _pi_bridge_label(cfg: Config) -> str:
+    if cfg.pi_bridge.enabled:
+        return f"on -> {cfg.pi_bridge.telemetry_topic}"
+    return "off"
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Commands
 # ─────────────────────────────────────────────────────────────────────────────
@@ -136,7 +142,8 @@ def serve(
                 f"[bold]Broker[/bold]  {cfg.mqtt.host}:{cfg.mqtt.port}\n"
                 f"[bold]Ollama[/bold]  {cfg.llm.base_url}\n"
                 f"[bold]Model [/bold]  {cfg.llm.model}\n"
-                f"[bold]DB    [/bold]  {cfg.storage.db_path}",
+                f"[bold]DB    [/bold]  {cfg.storage.db_path}\n"
+                f"[bold]PiBrdg[/bold]  {_pi_bridge_label(cfg)}",
             ),
             title="SentryAgent · serve",
             border_style="cyan",
@@ -203,6 +210,36 @@ def mock(
     asyncio.run(_run_mock(cfg, scenario, speed))
 
 
+@app.command(name="camera-relay")
+def camera_relay(
+    host: str = typer.Option(
+        "0.0.0.0",
+        "--host",
+        help="Bind address. 0.0.0.0 lets the Pi and phone reach it on the LAN.",
+    ),
+    port: int = typer.Option(8000, "--port", help="Listen port (default 8000)."),
+    log_level: str = typer.Option("info", "--log-level"),
+) -> None:
+    """Run the camera relay: the Pi pushes JPEG frames to
+    ws://<this-host>:<port>/ws/camera/stream and the mobile app views them
+    at ws://<this-host>:<port>/ws/camera/view. Browser preview at '/'."""
+    from .camera.relay import run as run_relay  # noqa: PLC0415 - heavy optional dep
+
+    console.print(
+        Panel(
+            Text.from_markup(
+                f"[bold]Bind   [/bold] {host}:{port}\n"
+                f"[bold]Pi push[/bold] ws://<this-host>:{port}/ws/camera/stream\n"
+                f"[bold]App view[/bold] ws://<this-host>:{port}/ws/camera/view\n"
+                f"[bold]Browser[/bold] http://<this-host>:{port}/",
+            ),
+            title="SentryAgent · camera relay",
+            border_style="cyan",
+        )
+    )
+    run_relay(host=host, port=port, log_level=log_level)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Async core
 # ─────────────────────────────────────────────────────────────────────────────
@@ -244,6 +281,8 @@ async def _run_serve(cfg: Config) -> None:
                 storage=storage,
                 history_window=cfg.agent.history_window_size,
                 history_load_limit=cfg.storage.history_load_limit,
+                pi_bridge=cfg.pi_bridge.enabled,
+                pi_noise_threshold=cfg.pi_bridge.noise_threshold,
             )
             await orch.run()
         finally:

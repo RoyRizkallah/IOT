@@ -271,28 +271,12 @@ class _HeroHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                'History',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                    ),
-              ),
-              const Spacer(),
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(
-                  Icons.tune_rounded,
-                  color: AppColors.textSecondary,
+          Text(
+            'History',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
                 ),
-                style: IconButton.styleFrom(
-                  backgroundColor: AppColors.bgSurface,
-                  shape: const CircleBorder(),
-                ),
-              ),
-            ],
           ),
           const SizedBox(height: 4),
           Text(

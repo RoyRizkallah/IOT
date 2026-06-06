@@ -56,3 +56,16 @@ storage:
 
   # Periodic prune to bound DB size. Per-table cap.
   prune_max_rows: 5000
+
+pi_bridge:
+  # The physical Raspberry Pi publishes ONE combined telemetry message
+  # (temperature/humidity/motion/noise) instead of one-per-sensor. When
+  # enabled, the orchestrator subscribes to `telemetry_topic` and fans the
+  # payload out into the normal classify -> LLM -> SQLite pipeline. No Pi
+  # code changes required. Disable to run purely on the mock publishers.
+  enabled: true
+  telemetry_topic: iot/pi/telemetry
+
+  # The Pi's digital sound sensor is binary (loud spikes ~750, idle ~120).
+  # Readings >= this map to an ALERT-level dB; below maps to idle.
+  noise_threshold: 400.0

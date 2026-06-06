@@ -339,7 +339,19 @@ class _BrokerSection extends ConsumerWidget {
           icon: Icons.memory_rounded,
           iconColor: AppColors.sensorTemp,
           label: 'Raspberry Pi sensors',
-          sub: 'Mock publisher today; physical Pi pending',
+          sub: 'Pi telemetry bridge active (iot/pi/telemetry)',
+        ),
+        const _SoftDivider(),
+        _RowTile(
+          icon: Icons.videocam_rounded,
+          iconColor: AppColors.sensorMotion,
+          label: 'Camera relay',
+          sub: ref.watch(cameraViewUrlProvider),
+          showChevron: true,
+          onTap: () {
+            Haptics.tap();
+            ref.read(mainTabIndexProvider.notifier).state = 1;
+          },
         ),
       ],
     );
@@ -573,28 +585,12 @@ class _BrokerEditSheetState extends State<_BrokerEditSheet> {
 class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(
-          'Settings',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
-        ),
-        const Spacer(),
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(
-            Icons.search_rounded,
-            color: AppColors.textSecondary,
+    return Text(
+      'Settings',
+      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
           ),
-          style: IconButton.styleFrom(
-            backgroundColor: AppColors.bgSurface,
-            shape: const CircleBorder(),
-          ),
-        ),
-      ],
     );
   }
 }

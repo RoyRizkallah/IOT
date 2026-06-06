@@ -325,6 +325,26 @@ docker exec -it sentry-agent sqlite3 /data/sentry.db \
 | `home/control/siren` | agent/app → broker | `{"action": "trigger"\|"stop"}` | |
 | `home/control/chat/in` | app → agent | `ChatMessage` (role: user) | |
 | `home/control/replay` | app → agent | `{}` | triggers bulk dump |
+| `iot/pi/telemetry` | Pi → agent | combined `{temperature, humidity, motion, noise, …}` | **Pi bridge**: split into per-sensor readings, fed to the same classify pipeline |
+
+### Raspberry Pi bridge
+
+The physical Pi publishes one combined message on `iot/pi/telemetry` instead of
+one-per-sensor. When `pi_bridge.enabled` is true (default), the orchestrator
+translates it internally — no Pi-side data-format changes required:
+
+- `motion: "Active"/"Inactive"` → motion reading (`value 1.0/0.0`, `active`)
+- `noise` (binary sensor) → `≥ pi_bridge.noise_threshold` maps to ALERT-level dB, else idle
+- `temperature` → passes through; `humidity` → ignored (no model field)
+
+### Camera relay (`sentry camera-relay`)
+
+A standalone FastAPI service (separate from the MQTT agent). The Pi camera
+streamer pushes binary JPEG frames to `ws://<host>:8000/ws/camera/stream`; the
+relay keeps only the latest frame and re-broadcasts to viewers at
+`ws://<host>:8000/ws/camera/view` (plus `/stream.mjpeg`, `/snapshot.jpg`,
+`/status`, `/healthz`, and an HTML preview at `/`). Runs as the `camera` Docker
+service on port 8000.
 
 ---
 

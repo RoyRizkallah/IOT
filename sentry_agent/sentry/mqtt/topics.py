@@ -35,6 +35,13 @@ SIREN_TOPIC = "home/control/siren"
 CHAT_IN_TOPIC = "home/control/chat/in"
 REPLAY_REQ_TOPIC = "home/control/replay"
 
+# ─── Raspberry Pi bridge ──────────────────────────────────────────────────────
+# The physical Pi (raspberry_files/pi_sensor_publisher.py) publishes a single
+# combined telemetry message here instead of one-per-sensor on home/sensors/*.
+# The orchestrator's Pi bridge subscribes to this and fans it out internally.
+PI_TELEMETRY_TOPIC = "iot/pi/telemetry"
+PI_CONTROL_TOPIC = "iot/pi/control"
+
 # ─── Wildcards (for subscribers) ──────────────────────────────────────────────
 
 SENSOR_WILDCARD = f"{SENSOR_PREFIX}/+"

@@ -1,17 +1,24 @@
 # SentryAgent dev stack.
 #
-# Default profile brings up the full app:
+# Default profile brings up the REAL stack (ready for the Raspberry Pi):
 #   broker  — Mosquitto MQTT broker (1883 + 9001 websockets)
-#   sensors — sentry mock --scenario default
 #   agent   — sentry serve  (persists to /data/sentry.db, talks to Ollama)
+#   camera  — sentry camera-relay (Pi pushes JPEG -> app/browser view, :8000)
 #
-# Two optional profiles:
+# No fake data runs by default — the Pi is the data source. Use the `mock`
+# profile only for laptop-only testing without the Pi.
+#
+# Optional profiles:
+#   --profile mock          — add the simulated sensor publisher (no Pi needed)
 #   --profile with-ollama   — also run Ollama in a container + auto-pull model
 #   --profile tools         — mosquitto_sub for tailing the bus
 #
 # Typical usage:
-#   # Native Ollama installed on host (fastest path):
+#   # Real Pi on the LAN, native Ollama on host:
 #   docker compose up --build
+#
+#   # Laptop-only smoke test (no Pi): add the simulator
+#   docker compose --profile mock up --build
 #
 #   # No Ollama installed? Run everything in containers:
 #   docker compose --profile with-ollama up --build
@@ -44,10 +51,13 @@ services:
       retries: 10
       start_period: 5s
 
+  # Simulated sensors — OPT-IN only (laptop testing without the Pi).
+  # Enable with: docker compose --profile mock up
   sensors:
     build: .
     image: sentry-agent:latest
     container_name: sentry-sensors
+    profiles: ["mock"]
     restart: unless-stopped
     command: ["mock", "--scenario", "default", "--speed", "1.0"]
     environment:
@@ -83,6 +93,19 @@ services:
     depends_on:
       broker:
         condition: service_healthy
+
+  # ─── Camera relay ─────────────────────────────────────────────────────────
+  # The Raspberry Pi camera streamer pushes JPEG frames to
+  #   ws://<laptop-ip>:8000/ws/camera/stream
+  # and the mobile app (or a browser at http://<laptop-ip>:8000/) views them.
+  camera:
+    build: .
+    image: sentry-agent:latest
+    container_name: sentry-camera
+    restart: unless-stopped
+    command: ["camera-relay", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
 
   # ─── Optional: containerised Ollama ───────────────────────────────────────
   # Run with: docker compose --profile with-ollama up

@@ -27,6 +27,9 @@ dependencies:
   # MQTT — talks to the broker the orchestrator publishes on.
   mqtt_client: ^10.5.0
 
+  # Live camera — receives JPEG frames from the camera relay over WebSocket.
+  web_socket_channel: ^3.0.1
+
   # Persists the broker host/port between launches.
   shared_preferences: ^2.3.0
 

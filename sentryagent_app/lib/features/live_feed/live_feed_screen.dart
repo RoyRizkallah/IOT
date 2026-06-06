@@ -105,8 +105,6 @@ class _LiveFeedScreenState extends ConsumerState<LiveFeedScreen> {
           _TemperatureCard(samples: samples, focus: widget.initialFocus),
           const SizedBox(height: AppSpacing.md),
           _MotionCard(samples: samples, focus: widget.initialFocus),
-          const SizedBox(height: AppSpacing.md),
-          _DoorCard(samples: samples, focus: widget.initialFocus),
         ],
       ),
     );
@@ -266,21 +264,18 @@ class _Sample {
     required this.sound,
     required this.temperature,
     required this.motion,
-    required this.door,
   });
 
   final DateTime t;
   final double sound;
   final double temperature;
   final bool motion;
-  final bool door;
 
   static _Sample fromState(SecurityState s) => _Sample(
         t: s.lastUpdate,
         sound: s.reading(SensorType.sound).value,
         temperature: s.reading(SensorType.temperature).value,
         motion: s.reading(SensorType.motion).active,
-        door: s.reading(SensorType.door).active,
       );
 }
 
@@ -611,95 +606,6 @@ class _MotionCard extends StatelessWidget {
       ),
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-//  Door — a state-strip showing open/closed segments
-// ─────────────────────────────────────────────────────────────────────────
-
-class _DoorCard extends StatelessWidget {
-  const _DoorCard({required this.samples, this.focus});
-  final List<_Sample> samples;
-  final SensorType? focus;
-
-  @override
-  Widget build(BuildContext context) {
-    final openCount = samples.where((s) => s.door).length;
-    final lastOpen =
-        samples.where((s) => s.door).fold<DateTime?>(null, (a, s) => s.t);
-
-    return _ChartCard(
-      heroTag: 'sensor-${SensorType.door.name}',
-      title: 'Door',
-      subtitle: lastOpen == null
-          ? 'No openings in window'
-          : 'Last opened — see strip',
-      color: AppColors.sensorDoor,
-      colorSoft: AppColors.sensorDoorSoft,
-      icon: SensorMeta.icon(SensorType.door),
-      valueLabel: '$openCount',
-      chart: _DoorStrip(samples: samples),
-    );
-  }
-}
-
-class _DoorStrip extends StatelessWidget {
-  const _DoorStrip({required this.samples});
-  final List<_Sample> samples;
-
-  @override
-  Widget build(BuildContext context) {
-    if (samples.length < 2) return const _ChartEmpty();
-    return CustomPaint(
-      painter: _DoorStripPainter(samples: samples),
-      size: Size.infinite,
-    );
-  }
-}
-
-class _DoorStripPainter extends CustomPainter {
-  _DoorStripPainter({required this.samples});
-  final List<_Sample> samples;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final radius = const Radius.circular(8);
-    final base = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, size.height * 0.35, size.width, size.height * 0.3),
-      radius,
-    );
-    final basePaint = Paint()..color = AppColors.bgMuted;
-    canvas.drawRRect(base, basePaint);
-
-    final n = samples.length;
-    final stepX = size.width / (n - 1);
-    final openPaint = Paint()..color = AppColors.sensorDoor;
-    int? runStart;
-    for (var i = 0; i < n; i++) {
-      if (samples[i].door && runStart == null) runStart = i;
-      final endRun = !samples[i].door || i == n - 1;
-      if (runStart != null && endRun) {
-        final endIdx = samples[i].door ? i : i - 1;
-        final left = runStart * stepX;
-        final right = endIdx * stepX + stepX * 0.8;
-        final rect = Rect.fromLTRB(
-          left,
-          size.height * 0.35,
-          right,
-          size.height * 0.65,
-        );
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(rect, radius),
-          openPaint,
-        );
-        runStart = null;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DoorStripPainter old) =>
-      old.samples != samples;
 }
 
 // ─────────────────────────────────────────────────────────────────────────

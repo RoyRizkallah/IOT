@@ -49,6 +49,7 @@ from .mqtt.topics import (
     CHAT_OUT_TOPIC,
     DECISION_TOPIC,
     EVENTS_TOPIC,
+    PI_TELEMETRY_TOPIC,
     REPLAY_REQ_TOPIC,
     REPLAY_TOPIC,
     SENSOR_WILDCARD,
@@ -80,6 +81,8 @@ class Orchestrator:
         state_publish_interval_s: float = 5.0,
         decide_min_severity: ThreatLevel = ThreatLevel.warning,
         history_load_limit: int = 50,
+        pi_bridge: bool = True,
+        pi_noise_threshold: float = 400.0,
     ):
         self._bus = bus
         self._engine = engine
@@ -89,6 +92,8 @@ class Orchestrator:
         self._state_publish_interval_s = state_publish_interval_s
         self._decide_min_severity = decide_min_severity
         self._history_load_limit = history_load_limit
+        self._pi_bridge = pi_bridge
+        self._pi_noise_threshold = pi_noise_threshold
 
         self._readings: dict[SensorType, SensorReading] = {}
         self._recent_events: deque[SecurityEvent] = deque(maxlen=history_window)
@@ -213,6 +218,9 @@ class Orchestrator:
         self._bus.on(REPLAY_REQ_TOPIC)(self._on_replay_request)
         if self._chat is not None:
             self._bus.on(CHAT_IN_TOPIC)(self._on_chat_in)
+        if self._pi_bridge:
+            self._bus.on(PI_TELEMETRY_TOPIC)(self._on_pi_telemetry)
+            logger.info("Pi bridge enabled: listening on %s", PI_TELEMETRY_TOPIC)
 
     # ─── Sensor message → optional event → maybe decision ──────────
 
@@ -229,6 +237,13 @@ class Orchestrator:
             logger.warning("Bad sensor payload on %s: %s", topic, e)
             return
 
+        await self._process_reading(reading)
+
+    async def _process_reading(self, reading: SensorReading) -> None:
+        """Update live state from a single reading, classify it, and
+        (maybe) enqueue an LLM decision. Shared by the home/sensors path
+        and the Raspberry Pi telemetry bridge."""
+        sensor_type = reading.type
         prev_door = (
             self._readings.get(SensorType.door).value
             if SensorType.door in self._readings
@@ -260,6 +275,53 @@ class Orchestrator:
                     self._decision_queue.qsize(),
                     event.id,
                 )
+
+    # ─── Raspberry Pi telemetry bridge ──────────────────────────────
+    # The physical Pi publishes ONE combined message every few seconds:
+    #   {"temperature": 23.0, "humidity": 45, "motion": "Active"/"Inactive",
+    #    "noise": 750/120, "mode": "...", "led_*": "..."}
+    # We translate it into the internal SensorReading shape so the exact
+    # same classify → LLM → SQLite pipeline runs, no Pi-side changes needed.
+
+    async def _on_pi_telemetry(self, _topic: str, payload: dict) -> None:
+        now = datetime.now(UTC)
+
+        temp = payload.get("temperature")
+        if isinstance(temp, int | float):
+            await self._process_reading(
+                SensorReading(
+                    type=SensorType.temperature,
+                    value=float(temp),
+                    active=False,
+                    timestamp=now,
+                )
+            )
+
+        motion = payload.get("motion")
+        if motion is not None:
+            active = str(motion).strip().lower() == "active"
+            await self._process_reading(
+                SensorReading(
+                    type=SensorType.motion,
+                    value=1.0 if active else 0.0,
+                    active=active,
+                    timestamp=now,
+                )
+            )
+
+        noise = payload.get("noise")
+        if isinstance(noise, int | float):
+            loud = float(noise) >= self._pi_noise_threshold
+            # Binary sound sensor → map to a dB-ish value the classifier
+            # understands: loud crosses the ALERT threshold, idle is ignored.
+            await self._process_reading(
+                SensorReading(
+                    type=SensorType.sound,
+                    value=80.0 if loud else 40.0,
+                    active=loud,
+                    timestamp=now,
+                )
+            )
 
     # ─── Arm/disarm command ─────────────────────────────────────────
 

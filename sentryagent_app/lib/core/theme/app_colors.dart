@@ -65,8 +65,6 @@ class AppColors {
   static const Color sensorMotionSoft = Color(0xFFE0F7FB);
   static const Color sensorSound = Color(0xFF8B5CF6);    // violet
   static const Color sensorSoundSoft = Color(0xFFEFE9FF);
-  static const Color sensorDoor = Color(0xFF10B981);     // emerald
-  static const Color sensorDoorSoft = Color(0xFFE6F8F1);
   static const Color sensorTemp = Color(0xFFF97316);     // coral
   static const Color sensorTempSoft = Color(0xFFFFEDDF);
 

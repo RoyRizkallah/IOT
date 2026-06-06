@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/broker_config.dart';
+import '../data/camera_config.dart';
 import '../data/models/security_state.dart';
 import '../data/sources/mqtt_data_source.dart';
 import '../data/sources/security_data_source.dart';
@@ -76,3 +77,28 @@ final connectionStatusProvider = StreamProvider<ConnectionStatus>((ref) {
 
 /// Which tab is currently selected in the [MainShell].
 final mainTabIndexProvider = StateProvider<int>((_) => 0);
+
+/// Camera relay configuration. Persisted on every change. `main.dart`
+/// overrides this with the value loaded from SharedPreferences at boot.
+final cameraConfigProvider =
+    StateNotifierProvider<CameraConfigNotifier, CameraConfig>((ref) {
+  return CameraConfigNotifier(CameraConfig.defaults);
+});
+
+class CameraConfigNotifier extends StateNotifier<CameraConfig> {
+  CameraConfigNotifier(super.state);
+
+  Future<void> update(CameraConfig cfg) async {
+    if (cfg == state) return;
+    state = cfg;
+    await cfg.save();
+  }
+}
+
+/// The resolved `ws://host:port/ws/camera/view` URL, derived from the camera
+/// config + the active broker host. Recomputed when either changes.
+final cameraViewUrlProvider = Provider<String>((ref) {
+  final cam = ref.watch(cameraConfigProvider);
+  final broker = ref.watch(brokerConfigProvider);
+  return cam.viewUrl(broker);
+});
