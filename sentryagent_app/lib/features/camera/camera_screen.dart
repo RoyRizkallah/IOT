@@ -181,9 +181,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
             children: [
               _header(context),
               const SizedBox(height: AppSpacing.md),
-              _viewport(context),
+              Expanded(child: _viewport(context)),
               const SizedBox(height: AppSpacing.sm + 2),
               _statusBar(context),
+              SizedBox(height: 110 + MediaQuery.of(context).padding.bottom),
             ],
           ),
         ),
@@ -311,8 +312,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
           ),
         );
       },
-      child: Expanded(
-        child: Container(
+      child: Container(
         decoration: BoxDecoration(
           color: Colors.black,
           borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -394,7 +394,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
               ),
             ],
           ),
-        ),
         ),
       ),
     );
