@@ -124,11 +124,30 @@ class _AgentConsoleScreenState extends ConsumerState<AgentConsoleScreen> {
           children: [
             _Header(connStatus: connStatus),
             Expanded(
-              child: chatAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Error: $e')),
-                data: (messages) => _buildMessages(messages),
+              child: Stack(
+                children: [
+                  // Subtle gradient background for the chat area
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            AppColors.bgBase,
+                            AppColors.accentSoft.withValues(alpha: 0.3),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  chatAsync.when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => Center(child: Text('Error: $e')),
+                    data: (messages) => _buildMessages(messages),
+                  ),
+                ],
               ),
             ),
             if (!hasUserMessage && !_sending)
@@ -625,7 +644,7 @@ class _Suggestions extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        0,
+        AppSpacing.xs,
         AppSpacing.lg,
         AppSpacing.sm,
       ),
@@ -637,22 +656,31 @@ class _Suggestions extends StatelessWidget {
               onTap: () => onTap(q.text),
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm + 2,
-                  vertical: 8,
+                  horizontal: AppSpacing.sm + 4,
+                  vertical: 9,
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.bgSurface,
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                   boxShadow: AppShadows.card,
                   border: Border.all(
-                    color: AppColors.accent.withValues(alpha: 0.12),
+                    color: AppColors.accent.withValues(alpha: 0.18),
+                    width: 1,
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(q.icon, size: 14, color: AppColors.accent),
-                    const SizedBox(width: 6),
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: AppColors.accentSoft,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(q.icon, size: 12, color: AppColors.accent),
+                    ),
+                    const SizedBox(width: 8),
                     Text(
                       q.text,
                       style: Theme.of(context)

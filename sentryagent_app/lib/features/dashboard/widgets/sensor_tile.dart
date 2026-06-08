@@ -7,12 +7,12 @@ import '../../../core/widgets/press_scale.dart';
 import '../../../core/widgets/sensor_meta.dart';
 import '../../../data/models/security_state.dart';
 
-/// A single sensor tile in the 2×2 grid below the threat ring.
+/// A single sensor tile in the 2×N grid below the threat ring.
 ///
 ///  - White card with layered soft shadow
-///  - Top accent stripe in the sensor's signature color
-///  - Pulses gently when the sensor is active
-///  - Tap → live feed (Hero-flies into the matching chart card)
+///  - 6px top stripe with gradient fade from sensor color → transparent
+///  - Vivid gradient fill on the card when sensor is active
+///  - Larger value display for better at-a-glance reading
 class SensorTile extends StatelessWidget {
   const SensorTile({
     super.key,
@@ -54,35 +54,61 @@ class SensorTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.bgSurface,
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              boxShadow: AppShadows.card,
+              boxShadow: reading.active
+                  ? [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.18),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
+                        spreadRadius: -4,
+                      ),
+                      ...AppShadows.card,
+                    ]
+                  : AppShadows.card,
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppRadius.lg),
               child: Stack(
                 children: [
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(height: 4, color: color),
-                  ),
+                  // ── Active gradient fill ───────────────────────────
                   if (reading.active)
                     Positioned.fill(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [colorSoft, AppColors.bgSurface],
-                            stops: const [0, 0.85],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              colorSoft.withValues(alpha: 0.9),
+                              AppColors.bgSurface,
+                            ],
+                            stops: const [0.0, 0.75],
                           ),
                         ),
                       ),
                     ),
+
+                  // ── Top accent stripe (gradient) ───────────────────
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 6,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [color, color.withValues(alpha: 0.2)],
+                          stops: const [0.0, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // ── Content ───────────────────────────────────────
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.sm + 2,
-                      AppSpacing.sm + 6,
+                      AppSpacing.sm + 8,
                       AppSpacing.sm + 2,
                       AppSpacing.sm + 2,
                     ),
@@ -92,7 +118,7 @@ class SensorTile extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            SensorIconChip(type: reading.type, size: 32),
+                            SensorIconChip(type: reading.type, size: 34),
                             const Spacer(),
                             _ActivityDot(active: reading.active, color: color),
                           ],
@@ -102,22 +128,36 @@ class SensorTile extends StatelessWidget {
                           children: [
                             Text(
                               reading.type.displayName.toUpperCase(),
-                              style:
-                                  Theme.of(context).textTheme.labelSmall,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    color: reading.active
+                                        ? color
+                                        : AppColors.textTertiary,
+                                    letterSpacing: 1.2,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 10,
+                                  ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              _displayValue,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 19,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
-                                letterSpacing: -0.3,
-                                height: 1.1,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                _displayValue,
+                                maxLines: 1,
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  color: reading.active
+                                      ? color
+                                      : AppColors.textPrimary,
+                                  letterSpacing: -0.5,
+                                  height: 1.1,
+                                ),
                               ),
                             ),
                           ],
@@ -134,9 +174,6 @@ class SensorTile extends StatelessWidget {
     );
   }
 
-  /// During the Hero flight, blank out internal text and just show the
-  /// shape morphing — prevents text-baseline jitter when source/target have
-  /// different layouts.
   static Widget _shuttle(
     BuildContext flightContext,
     Animation<double> animation,
@@ -200,22 +237,30 @@ class _ActivityDotState extends State<_ActivityDot>
       builder: (_, __) {
         final v = _ctrl.value;
         return SizedBox(
-          width: 18,
-          height: 18,
+          width: 20,
+          height: 20,
           child: Stack(
             alignment: Alignment.center,
             children: [
               Container(
-                width: 18,
-                height: 18,
+                width: 20,
+                height: 20,
                 decoration: BoxDecoration(
-                  color: widget.color.withValues(alpha: 0.18 * (1 - v)),
+                  color: widget.color.withValues(alpha: 0.20 * (1 - v)),
                   shape: BoxShape.circle,
                 ),
               ),
               Container(
-                width: 8,
-                height: 8,
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: widget.color.withValues(alpha: 0.3 + 0.1 * (1 - v)),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Container(
+                width: 6,
+                height: 6,
                 decoration: BoxDecoration(
                   color: widget.color,
                   shape: BoxShape.circle,

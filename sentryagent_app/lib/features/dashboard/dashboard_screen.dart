@@ -11,7 +11,6 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/transitions.dart';
 import '../../core/widgets/connection_pill.dart';
 import '../../core/widgets/press_scale.dart';
-import '../../core/widgets/soft_card.dart';
 import '../../data/models/security_state.dart';
 import '../live_feed/live_feed_screen.dart';
 import 'widgets/activity_strip.dart';
@@ -455,7 +454,21 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        Container(
+          width: 4,
+          height: 18,
+          margin: const EdgeInsets.only(right: AppSpacing.xs),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppColors.accent, AppColors.accentDeep],
+            ),
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+        ),
         Text(title, style: Theme.of(context).textTheme.titleLarge),
         const Spacer(),
         if (trailing != null) trailing!,
@@ -623,31 +636,51 @@ class _ActionTile extends StatelessWidget {
       onTap: onTap,
       haptic: haptic,
       borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: SoftCard(
+      child: Container(
         padding: const EdgeInsets.symmetric(
           vertical: AppSpacing.md,
           horizontal: AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.bgSurface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.card,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
-                color: colorSoft,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colorSoft,
+                    colorSoft.withValues(alpha: 0.5),
+                  ],
+                ),
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-              child: Icon(icon, color: color, size: 18),
+              child: Icon(icon, color: color, size: 20),
             ),
-            const SizedBox(height: AppSpacing.xs),
+            const SizedBox(height: AppSpacing.xs + 2),
             Text(
               label,
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontSize: 12,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
                   ),
             ),
           ],
@@ -669,20 +702,47 @@ class _ArmCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final armed = state.armed;
-    return SoftCard(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        gradient: armed
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.accent, AppColors.accentDeep],
+              )
+            : null,
+        color: armed ? null : AppColors.bgSurface,
+        boxShadow: armed
+            ? [
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: 0.35),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                  spreadRadius: -4,
+                ),
+                ...AppShadows.card,
+              ]
+            : AppShadows.card,
+      ),
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
-              color: armed ? AppColors.accentSoft : AppColors.bgMuted,
+              color: armed
+                  ? Colors.white.withValues(alpha: 0.18)
+                  : AppColors.bgMuted,
               shape: BoxShape.circle,
             ),
             child: Icon(
               armed ? Icons.lock_rounded : Icons.lock_open_rounded,
-              color: armed ? AppColors.accent : AppColors.textTertiary,
+              color: armed ? Colors.white : AppColors.textTertiary,
+              size: 22,
             ),
           ),
           const SizedBox(width: AppSpacing.md),
@@ -692,14 +752,21 @@ class _ArmCard extends StatelessWidget {
               children: [
                 Text(
                   armed ? 'System armed' : 'System disarmed',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: armed ? Colors.white : null,
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   armed
-                      ? 'Agent is active. Threats will trigger alerts.'
-                      : 'Sensors still stream data — no alerts will fire.',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                      ? 'Agent active — threats will trigger alerts.'
+                      : 'Sensors streaming — no alerts will fire.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: armed
+                            ? Colors.white.withValues(alpha: 0.75)
+                            : null,
+                      ),
                 ),
               ],
             ),
@@ -716,20 +783,23 @@ class _ArmCard extends StatelessWidget {
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutCubic,
               padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
+                horizontal: AppSpacing.md + 4,
                 vertical: AppSpacing.sm + 4,
               ),
               decoration: BoxDecoration(
-                color: armed ? AppColors.bgMuted : AppColors.accent,
+                color: armed
+                    ? Colors.white.withValues(alpha: 0.2)
+                    : AppColors.accent,
                 borderRadius: BorderRadius.circular(AppRadius.md),
+                border: armed
+                    ? Border.all(color: Colors.white.withValues(alpha: 0.3))
+                    : null,
               ),
               child: Text(
-                armed ? 'Disarm' : 'Arm',
+                armed ? 'Disarm' : 'Arm now',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: armed
-                          ? AppColors.textPrimary
-                          : AppColors.textOnAccent,
-                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
                     ),
               ),
             ),

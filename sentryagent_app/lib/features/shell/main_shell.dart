@@ -13,11 +13,6 @@ import '../history/history_screen.dart';
 import '../reasoning/reasoning_log_screen.dart';
 import '../settings/settings_screen.dart';
 
-/// Top-level shell with a custom floating bottom navigation bar.
-///
-/// We avoid Material's [BottomNavigationBar] / [NavigationBar] because they
-/// don't get us the floating-pill look we want. The custom bar is small but
-/// it is what makes the app feel premium at first glance.
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
 
@@ -29,7 +24,7 @@ class _MainShellState extends ConsumerState<MainShell> {
   static const _tabs = <_TabItem>[
     _TabItem(icon: Icons.shield_rounded, label: 'Home'),
     _TabItem(icon: Icons.videocam_rounded, label: 'Camera'),
-    _TabItem(icon: Icons.psychology_rounded, label: 'Reasoning'),
+    _TabItem(icon: Icons.psychology_rounded, label: 'AI'),
     _TabItem(icon: Icons.bar_chart_rounded, label: 'History'),
     _TabItem(icon: Icons.chat_bubble_rounded, label: 'Agent'),
     _TabItem(icon: Icons.tune_rounded, label: 'Settings'),
@@ -95,66 +90,80 @@ class _FloatingNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 68,
+      height: 70,
       decoration: BoxDecoration(
         color: AppColors.bgSurface,
         borderRadius: BorderRadius.circular(AppRadius.xl),
         boxShadow: AppShadows.floating,
       ),
+      padding: const EdgeInsets.all(5),
       child: Row(
         children: List.generate(items.length, (i) {
           final selected = i == current;
           final item = items[i];
           return Expanded(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(AppRadius.xl),
+            child: GestureDetector(
               onTap: () => onTap(i),
+              behavior: HitTestBehavior.opaque,
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 280),
+                duration: const Duration(milliseconds: 260),
                 curve: Curves.easeOutCubic,
-                margin: const EdgeInsets.all(AppSpacing.xxs),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
-                  color: selected
-                      ? AppColors.accentSoft
-                      : Colors.transparent,
+                  gradient: selected
+                      ? const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [AppColors.accent, AppColors.accentDeep],
+                        )
+                      : null,
                   borderRadius: BorderRadius.circular(AppRadius.lg),
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(
+                            color: AppColors.accent.withValues(alpha: 0.30),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
                 ),
-                alignment: Alignment.center,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.center,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.easeOutCubic,
+                      width: selected ? 26 : 22,
+                      height: selected ? 26 : 22,
+                      child: Icon(
                         item.icon,
-                        size: 22,
+                        size: selected ? 24 : 21,
                         color: selected
-                            ? AppColors.accent
+                            ? Colors.white
                             : AppColors.textTertiary,
                       ),
-                      AnimatedSize(
-                        duration: const Duration(milliseconds: 280),
-                        curve: Curves.easeOutCubic,
-                        child: SizedBox(width: selected ? 6 : 0),
+                    ),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      child: SizedBox(
+                        height: selected ? 3 : 0,
                       ),
-                      if (selected)
-                        Text(
-                          item.label,
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.clip,
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelLarge
-                              ?.copyWith(
-                                color: AppColors.accent,
-                                fontWeight: FontWeight.w700,
-                              ),
+                    ),
+                    if (selected)
+                      Text(
+                        item.label,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                          height: 1,
+                          fontFamily: 'PlusJakartaSans',
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
             ),

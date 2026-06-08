@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -5,11 +6,11 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/security_state.dart';
 
-/// Soft animated gradient that sits behind the threat ring.
+/// Animated gradient hero region behind the threat ring.
 ///
-/// Two large blurred blobs in the threat-color family. They drift slowly,
-/// giving the hero region a sense of being "alive" without the user noticing.
-/// The colour family swaps based on threat level, with a smooth crossfade.
+/// Three large blurred blobs drift slowly in the threat-color family.
+/// A subtle radial vignette at the edges adds depth.
+/// The bottom fades smoothly into the app background.
 class HeroBackdrop extends StatefulWidget {
   const HeroBackdrop({super.key, required this.level, required this.child});
 
@@ -29,7 +30,7 @@ class _HeroBackdropState extends State<HeroBackdrop>
     super.initState();
     _drift = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 12),
+      duration: const Duration(seconds: 14),
     )..repeat();
   }
 
@@ -54,42 +55,86 @@ class _HeroBackdropState extends State<HeroBackdrop>
         final colors = _colors();
         return Stack(
           children: [
+            // ── Animated color blobs ──────────────────────────────────
             Positioned.fill(
               child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 700),
+                duration: const Duration(milliseconds: 800),
                 child: KeyedSubtree(
                   key: ValueKey(widget.level),
                   child: Stack(
                     children: [
                       _Blob(
-                        color: colors[0].withValues(alpha: 0.22),
+                        color: colors[0].withValues(alpha: 0.32),
                         alignment: Alignment(
-                          -0.6 + 0.15 * _wave(t, 0),
-                          -0.4 + 0.1 * _wave(t, 0.3),
-                        ),
-                        size: 360,
-                      ),
-                      _Blob(
-                        color: colors[2].withValues(alpha: 0.18),
-                        alignment: Alignment(
-                          0.6 + 0.15 * _wave(t, 0.5),
-                          -0.55 + 0.1 * _wave(t, 0.7),
-                        ),
-                        size: 320,
-                      ),
-                      _Blob(
-                        color: colors[1].withValues(alpha: 0.14),
-                        alignment: Alignment(
-                          0.0 + 0.2 * _wave(t, 0.2),
-                          -0.2 + 0.12 * _wave(t, 0.9),
+                          -0.55 + 0.18 * _wave(t, 0.0),
+                          -0.45 + 0.12 * _wave(t, 0.3),
                         ),
                         size: 380,
+                        blur: 90,
+                      ),
+                      _Blob(
+                        color: colors[2].withValues(alpha: 0.26),
+                        alignment: Alignment(
+                          0.65 + 0.16 * _wave(t, 0.5),
+                          -0.50 + 0.10 * _wave(t, 0.7),
+                        ),
+                        size: 340,
+                        blur: 80,
+                      ),
+                      _Blob(
+                        color: colors[1].withValues(alpha: 0.20),
+                        alignment: Alignment(
+                          0.05 + 0.22 * _wave(t, 0.2),
+                          -0.15 + 0.14 * _wave(t, 0.9),
+                        ),
+                        size: 400,
+                        blur: 100,
                       ),
                     ],
                   ),
                 ),
               ),
             ),
+
+            // ── Radial vignette (edges slightly darker for depth) ──────
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(0.0, -0.3),
+                    radius: 1.2,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.04),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Bottom fade into app background ────────────────────────
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 72,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      AppColors.bgBase.withValues(alpha: 0.85),
+                      AppColors.bgBase,
+                    ],
+                    stops: const [0.0, 0.7, 1.0],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Content ───────────────────────────────────────────────
             widget.child,
           ],
         );
@@ -98,8 +143,8 @@ class _HeroBackdropState extends State<HeroBackdrop>
   }
 
   double _wave(double t, double phase) {
-    final v = (t + phase) * 2 * 3.1415926;
-    return (v.remainder(2 * 3.1415926).abs() / 3.1415926) - 1;
+    final v = (t + phase) * 2 * math.pi;
+    return math.sin(v);
   }
 }
 
@@ -108,18 +153,20 @@ class _Blob extends StatelessWidget {
     required this.color,
     required this.alignment,
     required this.size,
+    required this.blur,
   });
 
   final Color color;
   final Alignment alignment;
   final double size;
+  final double blur;
 
   @override
   Widget build(BuildContext context) {
     return Align(
       alignment: alignment,
       child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+        imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
         child: Container(
           width: size,
           height: size,
