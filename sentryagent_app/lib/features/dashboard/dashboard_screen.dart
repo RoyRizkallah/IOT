@@ -182,6 +182,8 @@ class _DashboardContent extends ConsumerWidget {
                     readings: state.readings,
                     onTap: (t) => _openLiveFeed(context, t),
                   ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _BuzzerTile(ref: ref),
                   const SizedBox(height: AppSpacing.lg),
                   const _SectionHeader(title: 'Quick actions'),
                   const SizedBox(height: AppSpacing.md),
@@ -556,16 +558,16 @@ class _ActionsRow extends StatelessWidget {
         Expanded(
           child: _ActionTile(
             icon: Icons.notifications_active_rounded,
-            label: 'Test siren',
+            label: 'Trigger siren',
             color: AppColors.threatAlert,
             colorSoft: AppColors.threatAlertSoft,
             haptic: HapticLevel.alert,
             onTap: () {
               ref.read(dataSourceProvider).triggerSiren();
+              ref.read(dataSourceProvider).triggerBuzzer();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content:
-                      const Text('Test siren engaged for 6 seconds'),
+                  content: const Text('ðŸ”” Siren + buzzer triggered'),
                   duration: const Duration(seconds: 3),
                   backgroundColor: AppColors.threatAlert,
                   behavior: SnackBarBehavior.floating,
@@ -576,8 +578,7 @@ class _ActionsRow extends StatelessWidget {
                     AppSpacing.lg + 70,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppRadius.md),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                 ),
               );
@@ -822,6 +823,144 @@ class _ArmCardState extends State<_ArmCard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Buzzer tile
+// -----------------------------------------------------------------------------
+
+class _BuzzerTile extends ConsumerStatefulWidget {
+  const _BuzzerTile({required this.ref});
+  final WidgetRef ref;
+
+  @override
+  ConsumerState<_BuzzerTile> createState() => _BuzzerTileState();
+}
+
+class _BuzzerTileState extends ConsumerState<_BuzzerTile>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+  bool _firing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  Future<void> _trigger() async {
+    if (_firing) return;
+    Haptics.alert();
+    setState(() => _firing = true);
+    widget.ref.read(dataSourceProvider).triggerBuzzer();
+    await Future<void>.delayed(const Duration(seconds: 3));
+    if (mounted) setState(() => _firing = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const color = Color(0xFFFF6B00);
+    const colorSoft = Color(0xFFFFF3E8);
+
+    return PressScale(
+      onTap: _trigger,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        decoration: BoxDecoration(
+          gradient: _firing
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFF6B00), Color(0xFFFF3D00)],
+                )
+              : null,
+          color: _firing ? null : AppColors.bgSurface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: _firing
+              ? [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.35),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  )
+                ]
+              : AppShadows.card,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm + 4,
+        ),
+        child: Row(
+          children: [
+            AnimatedBuilder(
+              animation: _pulse,
+              builder: (_, __) => Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: _firing
+                      ? Colors.white.withValues(alpha: 0.18)
+                      : colorSoft,
+                  shape: BoxShape.circle,
+                  boxShadow: _firing
+                      ? [
+                          BoxShadow(
+                            color: color.withValues(
+                                alpha: 0.15 + 0.12 * _pulse.value),
+                            blurRadius: 14 + 8 * _pulse.value,
+                          )
+                        ]
+                      : null,
+                ),
+                child: Icon(
+                  Icons.volume_up_rounded,
+                  size: 22,
+                  color: _firing ? Colors.white : color,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Buzzer',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: _firing ? Colors.white : AppColors.textPrimary,
+                        ),
+                  ),
+                  Text(
+                    _firing ? 'Buzzing on Pi...' : 'Tap to trigger · alerts at 35 C',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: _firing
+                              ? Colors.white.withValues(alpha: 0.8)
+                              : AppColors.textSecondary,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              _firing ? Icons.graphic_eq_rounded : Icons.chevron_right_rounded,
+              color: _firing ? Colors.white : AppColors.textTertiary,
+              size: 20,
+            ),
+          ],
+        ),
       ),
     );
   }

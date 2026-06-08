@@ -20,6 +20,7 @@ class _Topics {
 
   static const arm = 'home/control/arm';
   static const siren = 'home/control/siren';
+  static const piBuzzer = 'iot/pi/control';
   static const chatIn = 'home/control/chat/in';
   static const replayReq = 'home/control/replay';
 }
@@ -96,6 +97,12 @@ class MqttDataSource implements SecurityDataSource {
   Future<void> triggerSiren() => _publish(
         _Topics.siren,
         jsonEncode({'action': 'trigger', 'reason': 'manual'}),
+      );
+
+  @override
+  Future<void> triggerBuzzer() => _publish(
+        _Topics.piBuzzer,
+        jsonEncode({'buzzer': true}),
       );
 
   @override

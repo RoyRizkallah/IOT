@@ -45,6 +45,9 @@ abstract class SecurityDataSource {
   /// Manual siren trigger (used by control panel, future use).
   Future<void> triggerSiren();
 
+  /// Trigger the physical buzzer on the Pi directly via iot/pi/control.
+  Future<void> triggerBuzzer();
+
   /// Re-issue a state replay request to the agent — used after the user
   /// changes broker config and we reconnect.
   Future<void> requestReplay();
