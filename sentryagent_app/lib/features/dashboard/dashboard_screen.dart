@@ -694,14 +694,30 @@ class _ActionTile extends StatelessWidget {
 // Arm card
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ArmCard extends StatelessWidget {
+class _ArmCard extends StatefulWidget {
   const _ArmCard({required this.state, required this.ref});
   final SecurityState state;
   final WidgetRef ref;
 
   @override
+  State<_ArmCard> createState() => _ArmCardState();
+}
+
+class _ArmCardState extends State<_ArmCard> {
+  late bool _armed = widget.state.armed;
+
+  @override
+  void didUpdateWidget(_ArmCard old) {
+    super.didUpdateWidget(old);
+    // When the backend confirms the new state, sync local value.
+    if (old.state.armed != widget.state.armed) {
+      setState(() => _armed = widget.state.armed);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final armed = state.armed;
+    final armed = _armed;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeOutCubic,
@@ -775,7 +791,8 @@ class _ArmCard extends StatelessWidget {
           PressScale(
             onTap: () {
               Haptics.confirm();
-              ref.read(dataSourceProvider).setArmed(!armed);
+              setState(() => _armed = !_armed);
+              widget.ref.read(dataSourceProvider).setArmed(_armed);
             },
             haptic: HapticLevel.none,
             borderRadius: BorderRadius.circular(AppRadius.md),

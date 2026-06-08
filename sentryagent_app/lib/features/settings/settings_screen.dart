@@ -20,10 +20,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _notif = true;
-  bool _autoArmNight = true;
-  bool _confirmYellow = true;
   bool _hapticsOn = true;
-  double _timeout = 60; // seconds
 
   @override
   Widget build(BuildContext context) {
@@ -56,18 +53,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   icon: Icons.notifications_active_rounded,
                   iconColor: AppColors.accent,
                   label: 'Push notifications',
-                  sub: 'Alerts on Red, confirmations on Yellow',
+                  sub: 'Alert on threat level changes',
                   value: _notif,
                   onChanged: (v) => setState(() => _notif = v),
-                ),
-                const _SoftDivider(),
-                _SwitchTile(
-                  icon: Icons.help_outline_rounded,
-                  iconColor: AppColors.threatWarning,
-                  label: 'Confirm Yellow events',
-                  sub: 'Ask before reacting on score 4–6',
-                  value: _confirmYellow,
-                  onChanged: (v) => setState(() => _confirmYellow = v),
                 ),
                 const _SoftDivider(),
                 _SwitchTile(
@@ -82,76 +70,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
 
             _Section(
-              label: 'Arming',
-              children: [
-                _SwitchTile(
-                  icon: Icons.bedtime_rounded,
-                  iconColor: AppColors.sensorSound,
-                  label: 'Auto-arm at night',
-                  sub: '23:00 → 06:00',
-                  value: _autoArmNight,
-                  onChanged: (v) => setState(() => _autoArmNight = v),
-                ),
-                const _SoftDivider(),
-                _SliderTile(
-                  icon: Icons.timer_rounded,
-                  iconColor: AppColors.sensorMotion,
-                  label: 'Confirmation timeout',
-                  sub: 'How long the agent waits before escalating',
-                  value: _timeout,
-                  min: 30,
-                  max: 120,
-                  divisions: 6,
-                  suffix: '${_timeout.round()}s',
-                  onChanged: (v) => setState(() => _timeout = v),
-                ),
-              ],
-            ),
-
-            _Section(
-              label: 'Privacy',
-              children: [
-                _PrivacyTile(),
-              ],
-            ),
-
-            _Section(
               label: 'About',
               children: [
                 _RowTile(
                   icon: Icons.info_outline_rounded,
                   iconColor: AppColors.textSecondary,
                   label: 'Version',
-                  trailing: const _ValueText('0.1.0'),
+                  trailing: const _ValueText('1.0.0'),
                 ),
                 const _SoftDivider(),
                 _RowTile(
                   icon: Icons.tag_rounded,
                   iconColor: AppColors.textSecondary,
                   label: 'Build',
-                  trailing: const _ValueText('debug · 2026.05'),
-                ),
-                const _SoftDivider(),
-                _RowTile(
-                  icon: Icons.book_outlined,
-                  iconColor: AppColors.textSecondary,
-                  label: 'Documentation',
-                  showChevron: true,
-                  onTap: () => _showComingSoon(context),
-                ),
-                const _SoftDivider(),
-                _RowTile(
-                  icon: Icons.code_rounded,
-                  iconColor: AppColors.textSecondary,
-                  label: 'Open source licenses',
-                  showChevron: true,
-                  onTap: () {
-                    showLicensePage(
-                      context: context,
-                      applicationName: 'SentryAgent',
-                      applicationVersion: '0.1.0',
-                    );
-                  },
+                  trailing: const _ValueText('2026.06'),
                 ),
               ],
             ),
@@ -159,15 +91,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _Section(
               label: 'Danger zone',
               children: [
-                _RowTile(
-                  icon: Icons.refresh_rounded,
-                  iconColor: AppColors.threatWarning,
-                  label: 'Reset all settings',
-                  sub: 'Restore defaults; preserves history',
-                  showChevron: true,
-                  onTap: () => _confirmReset(context),
-                ),
-                const _SoftDivider(),
                 _RowTile(
                   icon: Icons.delete_outline_rounded,
                   iconColor: AppColors.threatAlert,
@@ -186,54 +109,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ),
     );
-  }
-
-  void _showComingSoon(BuildContext context) {
-    Haptics.tap();
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(
-        content: Text('Available once the Raspberry Pi is connected'),
-      ));
-  }
-
-  Future<void> _confirmReset(BuildContext context) async {
-    Haptics.tap();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Reset all settings?'),
-        content: const Text(
-          'Restores notifications, arming and AI defaults. '
-          'Your event history will be preserved.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Reset'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      setState(() {
-        _notif = true;
-        _autoArmNight = true;
-        _confirmYellow = true;
-        _hapticsOn = true;
-        _timeout = 60;
-      });
-      Haptics.confirm();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(const SnackBar(content: Text('Settings reset')));
-      }
-    }
   }
 
   Future<void> _confirmClearHistory(BuildContext context) async {
@@ -333,13 +208,6 @@ class _BrokerSection extends ConsumerWidget {
                 ));
             }
           },
-        ),
-        const _SoftDivider(),
-        _RowTile(
-          icon: Icons.memory_rounded,
-          iconColor: AppColors.sensorTemp,
-          label: 'Raspberry Pi sensors',
-          sub: 'Pi telemetry bridge active (iot/pi/telemetry)',
         ),
         const _SoftDivider(),
         _RowTile(
@@ -946,211 +814,6 @@ class _SwitchTile extends StatelessWidget {
   }
 }
 
-class _SliderTile extends StatelessWidget {
-  const _SliderTile({
-    required this.icon,
-    required this.iconColor,
-    required this.label,
-    required this.sub,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.divisions,
-    required this.suffix,
-    required this.onChanged,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String label;
-  final String sub;
-  final double value;
-  final double min;
-  final double max;
-  final int divisions;
-  final String suffix;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        AppSpacing.sm,
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _IconChip(icon: icon, color: iconColor),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(sub, style: Theme.of(context).textTheme.bodySmall),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.accentSoft,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
-                child: Text(
-                  suffix,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppColors.accent,
-                        fontWeight: FontWeight.w800,
-                        fontFamily: 'monospace',
-                      ),
-                ),
-              ),
-            ],
-          ),
-          SliderTheme(
-            data: SliderThemeData(
-              trackHeight: 3,
-              activeTrackColor: AppColors.accent,
-              inactiveTrackColor: AppColors.bgMuted,
-              thumbColor: AppColors.accent,
-              overlayColor: AppColors.accent.withValues(alpha: 0.12),
-            ),
-            child: Slider(
-              value: value,
-              min: min,
-              max: max,
-              divisions: divisions,
-              onChanged: (v) {
-                Haptics.tap();
-                onChanged(v);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PrivacyTile extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.threatSafeSoft,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                ),
-                child: const Icon(
-                  Icons.lock_rounded,
-                  size: 18,
-                  color: AppColors.threatSafe,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  'What leaves your home',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Sensor data stays on your Pi. The agent only sends a compact, '
-            'anonymised summary to the LLM when reasoning about a Yellow-zone '
-            'event. No video, no audio, no personally-identifying details.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.55,
-                ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Row(
-            children: [
-              const _PrivacyBadge(
-                icon: Icons.videocam_off_rounded,
-                text: 'No video',
-              ),
-              const SizedBox(width: 6),
-              const _PrivacyBadge(
-                icon: Icons.mic_off_rounded,
-                text: 'No audio',
-              ),
-              const SizedBox(width: 6),
-              const _PrivacyBadge(
-                icon: Icons.fingerprint_rounded,
-                text: 'Anonymised',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PrivacyBadge extends StatelessWidget {
-  const _PrivacyBadge({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Flexible(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppColors.threatSafeSoft,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 12, color: AppColors.threatSafe),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.threatSafe,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Building blocks
