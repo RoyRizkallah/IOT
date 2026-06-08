@@ -169,21 +169,23 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
       backgroundColor: AppColors.bgBase,
       body: SafeArea(
         bottom: false,
-        child: ListView(
-          physics: const BouncingScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
             AppSpacing.lg,
             AppSpacing.md,
             AppSpacing.lg,
-            110 + MediaQuery.of(context).padding.bottom,
+            0,
           ),
-          children: [
-            _header(context),
-            const SizedBox(height: AppSpacing.md),
-            _viewport(context),
-            const SizedBox(height: AppSpacing.md),
-            _detailsCard(context),
-          ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _header(context),
+              const SizedBox(height: AppSpacing.md),
+              _viewport(context),
+              const SizedBox(height: AppSpacing.sm + 2),
+              _statusBar(context),
+            ],
+          ),
         ),
       ),
     );
@@ -204,7 +206,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                     ),
               ),
               Text(
-                'Raspberry Pi camera stream',
+                'Raspberry Pi · Entrance',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -213,6 +215,86 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
         ValueListenableBuilder<_CamStatus>(
           valueListenable: _status,
           builder: (_, s, __) => _StatusPill(status: s),
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        _RoundIconButton(
+          icon: Icons.refresh_rounded,
+          tooltip: 'Reconnect',
+          onTap: _manualReconnect,
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        _RoundIconButton(
+          icon: Icons.settings_outlined,
+          tooltip: 'Camera settings',
+          onTap: () => _editCamera(context),
+        ),
+      ],
+    );
+  }
+
+  Widget _statusBar(BuildContext context) {
+    return Row(
+      children: [
+        ValueListenableBuilder<_CamStatus>(
+          valueListenable: _status,
+          builder: (_, s, __) {
+            final color = switch (s) {
+              _CamStatus.live => AppColors.threatSafe,
+              _CamStatus.connecting => AppColors.threatWarning,
+              _CamStatus.waiting => AppColors.threatWarning,
+              _CamStatus.offline => AppColors.threatAlert,
+            };
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  switch (s) {
+                    _CamStatus.live => 'Streaming',
+                    _CamStatus.connecting => 'Connecting…',
+                    _CamStatus.waiting => 'Waiting for signal',
+                    _CamStatus.offline => 'Offline — retrying',
+                  },
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
+            );
+          },
+        ),
+        const Spacer(),
+        ValueListenableBuilder<int>(
+          valueListenable: _fps,
+          builder: (_, fps, __) => Text(
+            '$fps fps',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textTertiary,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        ValueListenableBuilder<String?>(
+          valueListenable: _resolution,
+          builder: (_, res, __) => res != null
+              ? Text(
+                  res,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textTertiary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                )
+              : const SizedBox.shrink(),
         ),
       ],
     );
@@ -229,15 +311,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
           ),
         );
       },
-      child: Container(
+      child: Expanded(
+        child: Container(
         decoration: BoxDecoration(
           color: Colors.black,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
+          borderRadius: BorderRadius.circular(AppRadius.xl),
           boxShadow: AppShadows.card,
         ),
         clipBehavior: Clip.antiAlias,
-        child: AspectRatio(
-          aspectRatio: 4 / 3,
+        child: SizedBox.expand(
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -301,158 +383,19 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                   ),
                 ),
               ),
-              // Bottom strip: fps + tap-to-expand hint.
-              Positioned(
-                left: 10,
+              // Bottom-right: tap to expand hint.
+              const Positioned(
                 right: 10,
                 bottom: 10,
-                child: Row(
-                  children: [
-                    ValueListenableBuilder<int>(
-                      valueListenable: _fps,
-                      builder: (_, fps, __) => _GlassChip(
-                        icon: Icons.speed_rounded,
-                        text: '$fps fps',
-                      ),
-                    ),
-                    const Spacer(),
-                    const _GlassChip(
-                      icon: Icons.fullscreen_rounded,
-                      text: 'Tap to expand',
-                    ),
-                  ],
+                child: _GlassChip(
+                  icon: Icons.fullscreen_rounded,
+                  text: 'Tap to expand',
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _detailsCard(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: AppShadows.card,
-      ),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.sensorMotionSoft,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: const Icon(Icons.videocam_rounded,
-                    size: 20, color: AppColors.sensorMotion),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Entrance Camera',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    Text(
-                      'Indoor · Raspberry Pi',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              _RoundIconButton(
-                icon: Icons.refresh_rounded,
-                tooltip: 'Reconnect',
-                onTap: _manualReconnect,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              _RoundIconButton(
-                icon: Icons.settings_outlined,
-                tooltip: 'Camera settings',
-                onTap: () => _editCamera(context),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: ValueListenableBuilder<_CamStatus>(
-                  valueListenable: _status,
-                  builder: (_, s, __) {
-                    final live = s == _CamStatus.live;
-                    return _StatTile(
-                      icon: live
-                          ? Icons.sensors_rounded
-                          : Icons.sensors_off_rounded,
-                      label: 'Status',
-                      value: switch (s) {
-                        _CamStatus.live => 'Streaming',
-                        _CamStatus.connecting => 'Connecting',
-                        _CamStatus.waiting => 'Standby',
-                        _CamStatus.offline => 'Offline',
-                      },
-                      color: live
-                          ? AppColors.threatSafe
-                          : (s == _CamStatus.offline
-                              ? AppColors.threatAlert
-                              : AppColors.threatWarning),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: ValueListenableBuilder<int>(
-                  valueListenable: _fps,
-                  builder: (_, fps, __) => _StatTile(
-                    icon: Icons.speed_rounded,
-                    label: 'Frame rate',
-                    value: '$fps fps',
-                    color: AppColors.sensorMotion,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: ValueListenableBuilder<String?>(
-                  valueListenable: _resolution,
-                  builder: (_, res, __) => _StatTile(
-                    icon: Icons.hd_rounded,
-                    label: 'Resolution',
-                    value: res ?? '—',
-                    color: AppColors.sensorSound,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              const Icon(Icons.lock_rounded,
-                  size: 13, color: AppColors.textTertiary),
-              const SizedBox(width: 6),
-              Text(
-                'Private stream · stays on your local network',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textTertiary,
-                    ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -633,60 +576,6 @@ class _GlassChip extends StatelessWidget {
   }
 }
 
-class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.bgMuted,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(height: 6),
-          Text(
-            label.toUpperCase(),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.textTertiary,
-                  letterSpacing: 0.8,
-                  fontWeight: FontWeight.w700,
-                ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 1),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _RoundIconButton extends StatelessWidget {
   const _RoundIconButton({
