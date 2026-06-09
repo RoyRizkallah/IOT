@@ -157,11 +157,23 @@ class MqttDataSource implements SecurityDataSource {
     if (_disposed) return;
     _setStatus(ConnectionStatus.connecting);
 
+    // Use WebSocket for WS ports (bypasses firewalls that block raw MQTT 1883).
+    // HiveMQ public broker serves MQTT-over-WebSocket on port 8000.
+    const wsPorts = {8000, 8080, 8083, 8084};
+    final useWs = wsPorts.contains(_config.port);
+    // For WebSocket, mqtt_client needs the full ws:// URI as the host param.
+    final serverHost =
+        useWs ? 'ws://${_config.host}/mqtt' : _config.host;
     final client = MqttServerClient.withPort(
-      _config.host,
+      serverHost,
       _clientId(),
       _config.port,
     )
+      ..useWebSocket = useWs
+      // Mosquitto's WebSocket listener requires the `mqtt` subprotocol in the
+      // handshake. Without this the WS upgrade is rejected and the connection
+      // fails silently ("no broker"). Only set it for WS connections.
+      ..websocketProtocols = useWs ? ['mqtt'] : const <String>[]
       ..keepAlivePeriod = 20
       ..autoReconnect = true
       ..resubscribeOnAutoReconnect = true

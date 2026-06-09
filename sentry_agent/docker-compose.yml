@@ -38,8 +38,14 @@ services:
     container_name: sentry-broker
     restart: unless-stopped
     ports:
-      - "1883:1883"
-      - "9001:9001"
+      # Bind explicitly to IPv4 0.0.0.0 — Docker Desktop/WSL2 otherwise publishes
+      # these IPv6-only (::), which `adb reverse` (IPv4) can't reach over USB.
+      - "0.0.0.0:1883:1883"
+      - "0.0.0.0:9001:9001"
+      # Also expose the WebSocket listener on 8083 so the Flutter app — which
+      # only treats {8000,8080,8083,8084} as WebSocket ports — connects over WS
+      # without a code change. (8000 = camera relay; 8080 = held by Docker/WSL.)
+      - "0.0.0.0:8083:9001"
     volumes:
       - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - mosquitto_data:/mosquitto/data
@@ -105,7 +111,7 @@ services:
     restart: unless-stopped
     command: ["camera-relay", "--host", "0.0.0.0", "--port", "8000"]
     ports:
-      - "8000:8000"
+      - "0.0.0.0:8000:8000"
 
   # ─── Optional: containerised Ollama ───────────────────────────────────────
   # Run with: docker compose --profile with-ollama up

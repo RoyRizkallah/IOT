@@ -11,11 +11,16 @@ class BrokerConfig {
   final String host;
   final int port;
 
-  static const _hostKey = 'sentry.broker.host';
-  static const _portKey = 'sentry.broker.port';
+  // v4 keys — bumped so previously saved (broken) hosts/ports are ignored and
+  // the new default is picked up on first launch of this build.
+  static const _hostKey = 'sentry.broker.host.v4';
+  static const _portKey = 'sentry.broker.port.v4';
 
-  /// Default for the Android emulator. Real devices set this in Settings.
-  static const defaults = BrokerConfig(host: '10.0.2.2', port: 1883);
+  /// Default points at the PC-hosted Mosquitto broker over WebSocket port 8083.
+  /// For a USB-tethered phone we use `adb reverse` so 127.0.0.1:8083 on the
+  /// phone tunnels to the PC broker. For the WiFi/hotspot demo, change the host
+  /// in Settings to the PC's hotspot IP (192.168.137.1), same port 8083.
+  static const defaults = BrokerConfig(host: '127.0.0.1', port: 8083);
 
   static Future<BrokerConfig> load() async {
     final prefs = await SharedPreferences.getInstance();

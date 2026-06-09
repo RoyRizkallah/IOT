@@ -944,7 +944,7 @@ class _BuzzerTileState extends ConsumerState<_BuzzerTile>
                         ),
                   ),
                   Text(
-                    _firing ? 'Buzzing on Pi...' : 'Tap to trigger � alerts at 35 C',
+                    _firing ? 'Buzzing on Pi...' : 'Tap to trigger · alerts at 35°C',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: _firing
                               ? Colors.white.withValues(alpha: 0.8)
