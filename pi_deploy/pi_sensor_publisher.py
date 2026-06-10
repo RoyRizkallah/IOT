@@ -101,7 +101,7 @@ def read_motion() -> bool:
 
 
 def read_sound() -> float | None:
-    """Sample sound pin 20 times over 200ms — returns 70 if ANY sample was HIGH."""
+    """Digital sound sensor: 70.0 when the comparator detects noise, 40.0 when quiet."""
     if has_gpio and sound is not None:
         try:
             return 70.0 if sound.value else 40.0

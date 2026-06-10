@@ -104,6 +104,8 @@ class _LiveFeedScreenState extends ConsumerState<LiveFeedScreen> {
           const SizedBox(height: AppSpacing.md),
           _TemperatureCard(samples: samples, focus: widget.initialFocus),
           const SizedBox(height: AppSpacing.md),
+          _HumidityCard(samples: samples, focus: widget.initialFocus),
+          const SizedBox(height: AppSpacing.md),
           _MotionCard(samples: samples, focus: widget.initialFocus),
         ],
       ),
@@ -263,18 +265,21 @@ class _Sample {
     required this.t,
     required this.sound,
     required this.temperature,
+    required this.humidity,
     required this.motion,
   });
 
   final DateTime t;
   final double sound;
   final double temperature;
+  final double humidity;
   final bool motion;
 
   static _Sample fromState(SecurityState s) => _Sample(
         t: s.lastUpdate,
         sound: s.reading(SensorType.sound).value,
         temperature: s.reading(SensorType.temperature).value,
+        humidity: s.reading(SensorType.humidity).value,
         motion: s.reading(SensorType.motion).active,
       );
 }
@@ -530,6 +535,95 @@ class _TemperatureCard extends StatelessWidget {
                         colors: [
                           AppColors.sensorTemp.withValues(alpha: 0.22),
                           AppColors.sensorTemp.withValues(alpha: 0.02),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              duration: Duration.zero,
+            ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Humidity — smooth line
+// ─────────────────────────────────────────────────────────────────────────
+
+class _HumidityCard extends StatelessWidget {
+  const _HumidityCard({required this.samples, this.focus});
+  final List<_Sample> samples;
+  final SensorType? focus;
+
+  @override
+  Widget build(BuildContext context) {
+    final values = samples.map((s) => s.humidity).toList();
+    final spots = [
+      for (var i = 0; i < values.length; i++)
+        FlSpot(i.toDouble(), values[i]),
+    ];
+    final current = values.isEmpty ? 0.0 : values.last;
+    final minV = values.isEmpty ? 0.0 : values.reduce(math.min);
+    final maxV = values.isEmpty ? 0.0 : values.reduce(math.max);
+
+    final pad = (maxV - minV).abs() < 0.5 ? 1.0 : (maxV - minV) * 0.3;
+
+    return _ChartCard(
+      heroTag: 'sensor-${SensorType.humidity.name}',
+      title: 'Humidity',
+      subtitle: 'Drift · %',
+      color: AppColors.sensorHumidity,
+      colorSoft: AppColors.sensorHumiditySoft,
+      icon: SensorMeta.icon(SensorType.humidity),
+      valueLabel: '${current.toStringAsFixed(0)} %',
+      minLabel: '${minV.toStringAsFixed(0)} %',
+      maxLabel: '${maxV.toStringAsFixed(0)} %',
+      chart: spots.length < 2
+          ? const _ChartEmpty()
+          : LineChart(
+              LineChartData(
+                minY: minV - pad,
+                maxY: maxV + pad,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: math.max(0.5, (maxV - minV) / 3),
+                  getDrawingHorizontalLine: (_) => const FlLine(
+                    color: AppColors.divider,
+                    strokeWidth: 1,
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                titlesData: const FlTitlesData(show: false),
+                lineTouchData: const LineTouchData(enabled: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    curveSmoothness: 0.4,
+                    color: AppColors.sensorHumidity,
+                    barWidth: 3,
+                    dotData: FlDotData(
+                      show: true,
+                      checkToShowDot: (spot, _) =>
+                          spot.x == spots.last.x,
+                      getDotPainter: (_, __, ___, ____) =>
+                          FlDotCirclePainter(
+                        radius: 4,
+                        color: AppColors.bgSurface,
+                        strokeWidth: 3,
+                        strokeColor: AppColors.sensorHumidity,
+                      ),
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.sensorHumidity.withValues(alpha: 0.22),
+                          AppColors.sensorHumidity.withValues(alpha: 0.02),
                         ],
                       ),
                     ),

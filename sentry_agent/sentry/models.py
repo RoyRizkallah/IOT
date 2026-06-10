@@ -22,6 +22,7 @@ class SensorType(StrEnum):
     sound = "sound"
     door = "door"
     temperature = "temperature"
+    humidity = "humidity"
 
     @property
     def display_name(self) -> str:
@@ -34,6 +35,7 @@ class SensorType(StrEnum):
             SensorType.sound: "dB",
             SensorType.door: "",
             SensorType.temperature: "°C",
+            SensorType.humidity: "%",
         }[self]
 
 

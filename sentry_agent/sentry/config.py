@@ -64,7 +64,7 @@ class PiBridgeConfig:
 
     enabled: bool = True
     telemetry_topic: str = "iot/pi/telemetry"
-    noise_threshold: float = 400.0
+    noise_threshold: float = 65.0   # dB-ish; Pi reports 40 (quiet) – 90 (loud)
 
 
 @dataclass

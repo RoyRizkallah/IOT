@@ -31,6 +31,8 @@ class SensorTile extends StatelessWidget {
         return '${reading.value.toStringAsFixed(0)}${reading.type.unit}';
       case SensorType.temperature:
         return '${reading.value.toStringAsFixed(1)}${reading.type.unit}';
+      case SensorType.humidity:
+        return '${reading.value.toStringAsFixed(0)}${reading.type.unit}';
     }
   }
 

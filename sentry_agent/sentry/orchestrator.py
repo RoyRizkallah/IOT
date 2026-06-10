@@ -164,10 +164,23 @@ class Orchestrator:
         ]
         return SecurityState(
             armed=self._armed,
-            threat_score=threat_score_from_recent(list(self._recent_events)),
+            threat_score=self._live_threat_score(),
             readings=readings,
             last_update=datetime.now(UTC),
         )
+
+    def _live_threat_score(self) -> int:
+        """Live component (what sensors see RIGHT NOW) + a short decaying
+        tail per recent event. Quiet room → 0 within ~90s."""
+        score = 0.0
+        m = self._readings.get(SensorType.motion)
+        if m is not None and m.active:
+            score += 4.0
+        s = self._readings.get(SensorType.sound)
+        if s is not None and s.active:
+            score += 3.0
+        score += threat_score_from_recent(list(self._recent_events))
+        return min(10, round(score))
 
     # ─────────────────────────────────────────────────────────────────
     # Storage hydration
@@ -297,6 +310,17 @@ class Orchestrator:
                 )
             )
 
+        hum = payload.get("humidity")
+        if isinstance(hum, int | float):
+            await self._process_reading(
+                SensorReading(
+                    type=SensorType.humidity,
+                    value=float(hum),
+                    active=False,
+                    timestamp=now,
+                )
+            )
+
         motion = payload.get("motion")
         if motion is not None:
             active = str(motion).strip().lower() == "active"
@@ -311,13 +335,14 @@ class Orchestrator:
 
         noise = payload.get("noise")
         if isinstance(noise, int | float):
-            loud = float(noise) >= self._pi_noise_threshold
-            # Binary sound sensor → map to a dB-ish value the classifier
-            # understands: loud crosses the ALERT threshold, idle is ignored.
+            # The Pi maps comparator pulse rate to a 40–90 dB-ish scale;
+            # forward the real value so the app shows live levels.
+            db = float(noise)
+            loud = db >= self._pi_noise_threshold
             await self._process_reading(
                 SensorReading(
                     type=SensorType.sound,
-                    value=80.0 if loud else 40.0,
+                    value=db,
                     active=loud,
                     timestamp=now,
                 )

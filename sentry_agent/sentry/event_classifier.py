@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from .models import SecurityEvent, SensorReading, SensorType, ThreatLevel
 
@@ -172,18 +173,31 @@ def _bump(sev: ThreatLevel) -> ThreatLevel:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def threat_score_from_recent(recent_events: list[SecurityEvent]) -> int:
-    """Cheap rolling score from the last few events.
+# Each event contributes a small tail that fades out over this window, so
+# the ring spikes on activity and relaxes quickly once the room is calm.
+_SCORE_WINDOW_S = 90.0
 
-    The agent doesn't *need* this — it has the full event log — but the
-    Flutter ThreatRing renders this and refreshing the score on every
-    sensor tick keeps the UI feeling alive.
+
+def threat_score_from_recent(recent_events: list[SecurityEvent]) -> float:
+    """Short-lived event tail: per-event contribution decaying over ~90s.
+
+    Returns a float 0..6 — the orchestrator adds the live sensor component
+    (motion/sound active right now) on top and caps the total at 10.
     """
     if not recent_events:
-        return 0
+        return 0.0
 
-    weights = {ThreatLevel.safe: 1, ThreatLevel.warning: 3, ThreatLevel.alert: 5}
-    score = 0
+    now = datetime.now(UTC)
+    weights = {
+        ThreatLevel.safe: 0.5,
+        ThreatLevel.warning: 1.5,
+        ThreatLevel.alert: 2.5,
+    }
+    score = 0.0
     for e in recent_events[:6]:
-        score += weights[e.severity]
-    return min(10, score)
+        ts = e.timestamp if e.timestamp.tzinfo else e.timestamp.replace(tzinfo=UTC)
+        age_s = (now - ts).total_seconds()
+        if age_s >= _SCORE_WINDOW_S:
+            continue
+        score += weights[e.severity] * (1.0 - age_s / _SCORE_WINDOW_S)
+    return min(6.0, score)

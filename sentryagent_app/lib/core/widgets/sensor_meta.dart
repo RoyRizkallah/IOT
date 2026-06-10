@@ -12,18 +12,21 @@ class SensorMeta {
         SensorType.motion => Icons.directions_walk_rounded,
         SensorType.sound => Icons.graphic_eq_rounded,
         SensorType.temperature => Icons.thermostat_rounded,
+        SensorType.humidity => Icons.water_drop_rounded,
       };
 
   static Color color(SensorType t) => switch (t) {
         SensorType.motion => AppColors.sensorMotion,
         SensorType.sound => AppColors.sensorSound,
         SensorType.temperature => AppColors.sensorTemp,
+        SensorType.humidity => AppColors.sensorHumidity,
       };
 
   static Color colorSoft(SensorType t) => switch (t) {
         SensorType.motion => AppColors.sensorMotionSoft,
         SensorType.sound => AppColors.sensorSoundSoft,
         SensorType.temperature => AppColors.sensorTempSoft,
+        SensorType.humidity => AppColors.sensorHumiditySoft,
       };
 }
 

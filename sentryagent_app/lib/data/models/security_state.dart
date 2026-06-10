@@ -12,7 +12,8 @@ import 'dart:convert';
 enum SensorType {
   motion,
   sound,
-  temperature;
+  temperature,
+  humidity;
 
   /// Returns null for sensor types this build doesn't render (so legacy or
   /// unexpected readings are dropped instead of crashing the UI).
@@ -20,6 +21,7 @@ enum SensorType {
         'motion' => SensorType.motion,
         'sound' => SensorType.sound,
         'temperature' => SensorType.temperature,
+        'humidity' => SensorType.humidity,
         _ => null,
       };
 
@@ -32,12 +34,14 @@ enum SensorType {
         SensorType.motion => 'Motion',
         SensorType.sound => 'Sound',
         SensorType.temperature => 'Temperature',
+        SensorType.humidity => 'Humidity',
       };
 
   String get unit => switch (this) {
         SensorType.motion => '',
         SensorType.sound => 'dB',
         SensorType.temperature => '°C',
+        SensorType.humidity => '%',
       };
 }
 

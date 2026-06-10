@@ -66,6 +66,6 @@ pi_bridge:
   enabled: true
   telemetry_topic: iot/pi/telemetry
 
-  # The Pi's digital sound sensor is binary (loud spikes ~750, idle ~120).
-  # Readings >= this map to an ALERT-level dB; below maps to idle.
-  noise_threshold: 400.0
+  # The Pi maps comparator pulse rate to a 40 (quiet) – 90 (loud) dB-ish
+  # scale. Readings >= this count as "loud" for the classifier.
+  noise_threshold: 65.0

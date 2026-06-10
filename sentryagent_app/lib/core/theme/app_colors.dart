@@ -67,6 +67,8 @@ class AppColors {
   static const Color sensorSoundSoft = Color(0xFFEFE9FF);
   static const Color sensorTemp = Color(0xFFF97316);     // coral
   static const Color sensorTempSoft = Color(0xFFFFEDDF);
+  static const Color sensorHumidity = Color(0xFF0EA5E9); // sky blue
+  static const Color sensorHumiditySoft = Color(0xFFE0F2FE);
 
   // ── Shadows ───────────────────────────────────────────────────────────
   // Layered shadows: a near-tight one for crispness, a softer wide one for depth.
